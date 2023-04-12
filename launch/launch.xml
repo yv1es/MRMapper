@@ -1,14 +1,19 @@
 <launch>
     <!-- Launch rtabmap -->
     <include file="$(find MRMapper)/launch/launch_rtabmap.xml" /> 
-    
-    <!-- Launch camera publisher -->
-    <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node> 
 
-    
+    <!-- Launch camera publisher -->
+    <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node>
+
+    <!-- Launch unity subscriber -->
+    <node name="unity_subscriber" pkg="MRMapper" type="unity_subscriber.py" output="screen"></node> 
+
     <!-- RTABmap needs the transform from base_link to camera_link (see more: http://wiki.ros.org/rtabmap_ros/Tutorials/StereoHandHeldMapping -->
     <arg name="pi/2" value="1.5707963267948966" />
     <arg name="optical_rotate" value="0 0 0 -$(arg pi/2) 0 -$(arg pi/2)" />
     <node pkg="tf" type="static_transform_publisher" name="camera_base_link"
         args="$(arg optical_rotate)  base_link camera_link 100" /> 
+
+    <!-- Launch rviz -->
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/>  -->
 </launch>
