@@ -3,7 +3,7 @@
     <include file="$(find MRMapper)/launch/launch_rtabmap.xml" /> 
     
     <!-- Launch camera publisher -->
-    <node name="camera_publisher" pkg="MRMapper" type="publisher.py" output="screen"></node> 
+    <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node> 
 
     
     
