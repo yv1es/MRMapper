@@ -33,7 +33,6 @@ RUN mkdir -p ~/catkin_ws/src \
 # add source command to bashrc 
 RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
-RUN pip install cvbridge3
 
 
 RUN cd ~/catkin_ws \
@@ -46,9 +45,12 @@ RUN cd ~/catkin_ws/src \
 RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs ros-noetic-pcl-msgs  ros-noetic-image-geometry ros-noetic-tf2-eigen
 
 
+RUN pip install cvbridge3
 # install realsense stream packet
 RUN cd ~/catkin_ws/src \
-    && git clone https://github.com/yv1es/realsense_stream.git \
+    && git clone https://github.com/yv1es/MRMapper.git \
+    && cd ~/catkin_ws/src/MRMapper/src \
+    && chmod +x * \
     && . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j4

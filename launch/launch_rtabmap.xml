@@ -16,16 +16,11 @@
       <param name="frame_id"       type="string" value="base_link "/>     
       <param name="Odom/ResetCountdown" value="10" />
 
-      <!-- <param name="Kp/DetectorStrategy" type="int" value="0" /> -->
-
       <param name="Kp/DetectorStrategy" type="int" value="8" />
       <param name="Vis/FeatureType" type="int" value="8" />
 
       <param name="SURF/GpuVersion" type="bool" value="true" />
       <param name="ORB/Gpu" type="bool" value="true" />
-
-      <!-- <param name="RGBD/OptimizeFromGraphEnd" type="bool" value="true" />    -->
-
 
       <remap from="rgbd_image" to="rgbd_image"/>
     </node>
@@ -35,10 +30,8 @@
           <param name="subscribe_depth" type="bool"   value="false"/>
           <param name="subscribe_rgbd"  type="bool"   value="true"/>
           
-
           <remap from="odom"       to="odom"/>
           <remap from="rgbd_image" to="rgbd_image"/>
-
 
           <param name="queue_size"  type="int"  value="10"/>
           <param name="approx_sync" type="bool" value="false"/>
@@ -61,20 +54,11 @@
 
           <param name="SURF/GpuVersion" type="bool" value="true" />
           <param name="ORB/Gpu" type="bool" value="true" />
-
-
-          <!-- <param name="RGBD/OptimizeFromGraphEnd" type="bool" value="true" />    -->
-
-
     </node>
 
-
-    
     <node name="rtabmapviz" pkg="rtabmap_ros" type="rtabmapviz" output="screen">
       <param name="subscribe_rgbd"  type="bool" value="true"/>
     </node>  
-    
-    
-        
+            
   </group>
 </launch>
