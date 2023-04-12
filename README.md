@@ -1,1 +1,1 @@
-# MapMaster
+# MRMapper
