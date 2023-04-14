@@ -107,6 +107,7 @@ def main():
             time.sleep(1)
         except KeyboardInterrupt as _:
             break
+        
     print("Stopping capture")
     socket.close()
     pipeline.stop()
