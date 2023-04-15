@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -14,11 +15,22 @@ public class PointCloudRenderer : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private Receiver receiver;
+    public float pointSize = 0.01f;
 
+    Mesh mesh;
+    MeshFilter meshFilter;
+    MeshRenderer meshRenderer;
 
 
     public void Start()
     {
+        meshFilter = gameObject.AddComponent<MeshFilter>();
+        
+        meshRenderer = gameObject.AddComponent<MeshRenderer>();
+        meshRenderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
+        meshRenderer.material.SetColor("_Color", Color.white);
+        meshRenderer.material.SetFloat("_PointSize", pointSize);
+
 
         //ForceDotNet.Force();  // If you have multiple sockets in the following threads
         receiver = new Receiver();
@@ -26,7 +38,7 @@ public class PointCloudRenderer : MonoBehaviour
         Action<byte[]> callback = (data) => {
             runOnMainThread.Enqueue(
             () => {
-                Debug.Log("Got bytes");
+                RenderPointCloud(data); 
             });
         };
 
@@ -52,6 +64,40 @@ public class PointCloudRenderer : MonoBehaviour
     private void OnDestroy()
     {
         receiver.Stop();
+    }
+
+
+    
+
+
+
+    void RenderPointCloud(byte[] pointCloudData)
+    {
+        List<Vector3> points = new List<Vector3>();
+        List<Color> colors = new List<Color>();
+        int numPoints = pointCloudData.Length / 32;
+
+        for (int i = 0; i < numPoints; i++)
+        {
+            int offset = i * 32;
+            float x = BitConverter.ToSingle(pointCloudData, offset);
+            float y = BitConverter.ToSingle(pointCloudData, offset + 4);
+            float z = BitConverter.ToSingle(pointCloudData, offset + 8);
+            points.Add(new Vector3(x, y, z));
+
+            Color color = new Color(pointCloudData[offset + 18] / 255f, pointCloudData[offset + 17] / 255f, pointCloudData[offset + 16] / 255f);
+            colors.Add(color);
+        }
+
+        
+        mesh = new Mesh();
+        mesh.SetVertices(points);
+        mesh.SetColors(colors);
+        mesh.SetIndices(Enumerable.Range(0, numPoints).ToArray(), MeshTopology.Points, 0);
+
+        meshFilter.mesh = mesh;
+
+
     }
 }
 
