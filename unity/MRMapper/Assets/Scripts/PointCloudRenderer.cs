@@ -14,7 +14,7 @@ using UnityEngine.XR;
 public class PointCloudRenderer : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
-    private Receiver receiver;
+    private PointCloudReceiver receiver;
     public float pointSize = 0.01f;
 
     Mesh mesh;
@@ -33,7 +33,7 @@ public class PointCloudRenderer : MonoBehaviour
 
 
         //ForceDotNet.Force();  // If you have multiple sockets in the following threads
-        receiver = new Receiver();
+        receiver = new PointCloudReceiver();
 
         Action<byte[]> callback = (data) => {
             runOnMainThread.Enqueue(
@@ -68,9 +68,6 @@ public class PointCloudRenderer : MonoBehaviour
 
 
     
-
-
-
     void RenderPointCloud(byte[] pointCloudData)
     {
         List<Vector3> points = new List<Vector3>();
@@ -89,31 +86,19 @@ public class PointCloudRenderer : MonoBehaviour
             colors.Add(color);
         }
 
-        
+        // update mesh 
         mesh = new Mesh();
         mesh.SetVertices(points);
         mesh.SetColors(colors);
         mesh.SetIndices(Enumerable.Range(0, numPoints).ToArray(), MeshTopology.Points, 0);
-
         meshFilter.mesh = mesh;
-
-
     }
 }
 
 
 
-// Define a class to hold the JSON data
-[Serializable]
-public class Data
-{
-    public int size;
-    public string points; 
-}
 
-
-
-public class Receiver
+public class PointCloudReceiver
 {
     private readonly Thread receiveThread;
     private bool running;
@@ -122,7 +107,7 @@ public class Receiver
     private int port = 5001;
     private String ip = "127.0.0.1";    
 
-    public Receiver()
+    public PointCloudReceiver()
     {
         receiveThread = new Thread((object callback) =>
         {
