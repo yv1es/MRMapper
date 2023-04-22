@@ -15,7 +15,7 @@ public class PointCloudRenderer : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private PointCloudReceiver receiver;
-    public float pointSize = 0.01f;
+    public float pointSize = 20f;
 
     Mesh mesh;
     MeshFilter meshFilter;

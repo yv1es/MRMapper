@@ -48,11 +48,11 @@ public class ReceiveOdom : MonoBehaviour
                 //reverse.z = rot.z;
                 //reverse.w = rot.w;
 
-                rot = rot;
-
-                this.transform.position = pos;  
-                //rot = RosToUnityQuat * rot;  
-                this.transform.rotation = rot;  
+                if (pos != Vector3.zero)
+                {
+                    this.transform.position = pos;  
+                    this.transform.rotation = rot;  
+                }
             });
         };
 

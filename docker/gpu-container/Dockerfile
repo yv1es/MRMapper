@@ -213,7 +213,9 @@ RUN cd ~/opencv-4.5.2 \
         # -D INSTALL_C_EXAMPLES=OFF .. 
     
 RUN cd ~/opencv-4.5.2/build \
-    && make -j10 \
+    && make -j10 
+    
+RUN cd ~/opencv-4.5.2/build \
     && make install
 
 
