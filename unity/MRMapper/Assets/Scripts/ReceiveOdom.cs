@@ -11,44 +11,50 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.XR;
 
-public class PointCloudRenderer : MonoBehaviour
+public class ReceiveOdom : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
-    private PointCloudReceiver receiver;
-    public float pointSize = 0.01f;
-
-    Mesh mesh;
-    MeshFilter meshFilter;
-    MeshRenderer meshRenderer;
-
+    private OdomReceiver receiver;
+   
 
     public void Start()
     {
-        this.transform.rotation = Quaternion.Euler(90, 90, 180); 
-        
-        meshFilter = gameObject.AddComponent<MeshFilter>();
-        
-        meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
-        meshRenderer.material.SetColor("_Color", Color.white);
-        meshRenderer.material.SetFloat("_PointSize", pointSize);
-
-
-        //ForceDotNet.Force();  // If you have multiple sockets in the following threads
-        receiver = new PointCloudReceiver();
+        receiver = new OdomReceiver();
 
         Action<byte[]> callback = (data) => {
             runOnMainThread.Enqueue(
             () => {
-                RenderPointCloud(data); 
+                // do stuff here 
+
+                Vector3 pos = new Vector3();
+                pos.z = BitConverter.ToSingle(data, 0);
+                pos.x = -BitConverter.ToSingle(data, 4);
+                pos.y = BitConverter.ToSingle(data, 8);
+
+                Quaternion rot = new Quaternion();
+                rot.z = BitConverter.ToSingle(data, 12);
+                rot.x = BitConverter.ToSingle(data, 16);
+                rot.y = BitConverter.ToSingle(data, 20);
+                rot.w = BitConverter.ToSingle(data, 24);
+
+                this.transform.position = pos;  
+                //rot = RosToUnityQuat * rot;  
+                this.transform.rotation = rot;  
             });
         };
 
         receiver.Start(callback);
-        Debug.Log("Receiver online");   
+        Debug.Log("Receiver online");
     }
 
-    
+
+    // Create a rotation quaternion to convert from ROS to Unity
+    private Quaternion RosToUnityQuat
+    {
+        get { return Quaternion.Euler(90, 0, 0); }// Quaternion.AngleAxis(Mathf.Rad2Deg * Mathf.PI / 2, new Vector3(1, 0, 0)); }
+    }
+
+
 
     // Update is called once per frame
     public void Update()
@@ -70,47 +76,23 @@ public class PointCloudRenderer : MonoBehaviour
     }
 
 
+
     
-    void RenderPointCloud(byte[] pointCloudData)
-    {
-        List<Vector3> points = new List<Vector3>();
-        List<Color> colors = new List<Color>();
-        int numPoints = pointCloudData.Length / 32;
-
-        for (int i = 0; i < numPoints; i++)
-        {
-            int offset = i * 32;
-            float x = BitConverter.ToSingle(pointCloudData, offset);
-            float y = BitConverter.ToSingle(pointCloudData, offset + 4);
-            float z = -BitConverter.ToSingle(pointCloudData, offset + 8);
-            points.Add(new Vector3(x, y, z));
-
-            Color color = new Color(pointCloudData[offset + 18] / 255f, pointCloudData[offset + 17] / 255f, pointCloudData[offset + 16] / 255f);
-            colors.Add(color);
-        }
-
-        // update mesh 
-        mesh = new Mesh();
-        mesh.SetVertices(points);
-        mesh.SetColors(colors);
-        mesh.SetIndices(Enumerable.Range(0, numPoints).ToArray(), MeshTopology.Points, 0);
-        meshFilter.mesh = mesh;
-    }
 }
 
 
 
 
-public class PointCloudReceiver
+public class OdomReceiver
 {
     private readonly Thread receiveThread;
     private bool running;
 
 
-    private int port = 5001;
-    private String ip = "127.0.0.1";    
+    private int port = 5002;
+    private string ip = "127.0.0.1";
 
-    public PointCloudReceiver()
+    public OdomReceiver()
     {
         receiveThread = new Thread((object callback) =>
         {
@@ -119,10 +101,11 @@ public class PointCloudReceiver
                 NetworkStream stream = client.GetStream();
 
 
-                Debug.Log("Connected");
+                Debug.Log("Odom Connected");
 
                 byte[] headerBuffer = new byte[4];
-                while (running) {
+                while (running)
+                {
 
                     // Read the header from the stream
                     int bytesRead = stream.Read(headerBuffer, 0, 4);
@@ -144,7 +127,7 @@ public class PointCloudReceiver
                     if (totalBytesRead == dataLength)
                     {
                         // Do something with the bytes data
-                        Debug.Log("Received " + dataLength + " bytes");
+                        Debug.Log("Odom Received " + dataLength + " bytes");
                         ((Action<byte[]>)callback)(dataBuffer);
                     }
 

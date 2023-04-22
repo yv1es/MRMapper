@@ -8,19 +8,33 @@ from sensor_msgs.msg import PointCloud2
 from nav_msgs.msg import Odometry
 import struct
 import queue
+import threading
+import numpy as np
 
 HOST = s.gethostname() 
-PORT = 5001
+PORT_PCL = 5001
+PORT_ODOM = 5002
 
-conn = None
-sender_queue = queue.Queue()
+conn_pcl = None
+conn_odom = None
+sender_queue_pcl = queue.Queue()
+sender_queue_odom = queue.Queue()
 
 
-def setupSocket():
-    socket = s.socket(s.AF_INET, s.SOCK_STREAM)
-    socket.bind((HOST, PORT)) 
-    socket.listen()
-    return socket
+def setupSockets():
+    socket_pcl = s.socket(s.AF_INET, s.SOCK_STREAM)
+    socket_pcl.bind((HOST, PORT_PCL)) 
+    socket_pcl.listen()
+
+    socket_odom = s.socket(s.AF_INET, s.SOCK_STREAM)
+    socket_odom.bind((HOST, PORT_ODOM)) 
+    socket_odom.listen()
+
+    rospy.loginfo("Listening for Unity connection")
+    global conn_pcl, conn_odom
+    conn_pcl, _ = socket_pcl.accept()
+    conn_odom, _ = socket_odom.accept()
+
 
 
 
@@ -30,7 +44,7 @@ def callback_cloud_map(cloud_map):
     data = cloud_map.data
     header = struct.pack('!I', len(data))
     message = header + data
-    sender_queue.put(message)
+    sender_queue_pcl.put(message)
     
 
 
@@ -40,19 +54,27 @@ def callback_odom(odom):
     
     position = odom.pose.pose.position # x, y, z
     orientation = odom.pose.pose.orientation # quaternion x, y, z, w
-    msg_dict = {
-        'position':[position.x, position.y, position.z],
-        'orientation':[orientation.x, orientation.y, orientation.z, orientation.w]
-    }
-    # ...
+    
+    data = np.array([position.x, position.y, position.z, orientation.x, orientation.y, orientation.z, orientation.w], dtype=np.float32).tobytes()
+    header = struct.pack('!I', len(data))
+    message = header + data
+    sender_queue_odom.put(message)
 
-
-def senderThread():
+def senderThreadPcl():
     while True:
         try:
-            data = sender_queue.get(timeout=1)
-            conn.sendall(data)
-            sender_queue.task_done()
+            data = sender_queue_pcl.get(timeout=1)
+            conn_pcl.sendall(data)
+            sender_queue_pcl.task_done()
+        except queue.Empty:
+            pass
+
+def senderThreadOdom():
+    while True:
+        try:
+            data = sender_queue_odom.get(timeout=1)
+            conn_odom.sendall(data)
+            sender_queue_odom.task_done()
         except queue.Empty:
             pass
 
@@ -63,11 +85,9 @@ def main():
     rospy.init_node('unity_subsciber', anonymous=True)
     
     # establish connection 
-    global conn
-    socket = setupSocket()
-    rospy.loginfo("Listening for Unity connection")
-    conn, _ = socket.accept()
+    setupSockets()
     
+
     rospy.loginfo("Connected to unity")
 
     # Subscribe to the "/rtabmap/cloud_map" topic
@@ -78,8 +98,17 @@ def main():
 
     # Spin until the node is stopped
     # rospy.spin()
-    senderThread()
 
+    sender_pcl = threading.Thread(target=senderThreadPcl)
+    sender_pcl.daemon = True
+    sender_pcl.start()
+
+    sender_odom = threading.Thread(target=senderThreadOdom)
+    sender_odom.daemon = True
+    sender_odom.start()
+
+
+    rospy.spin()
 
 if __name__ == '__main__':
     try:
