@@ -32,10 +32,23 @@ public class ReceiveOdom : MonoBehaviour
                 pos.y = BitConverter.ToSingle(data, 8);
 
                 Quaternion rot = new Quaternion();
-                rot.z = BitConverter.ToSingle(data, 12);
+                //rot.z = -BitConverter.ToSingle(data, 12);
+                //rot.x = BitConverter.ToSingle(data, 16);
+                //rot.y = BitConverter.ToSingle(data, 20);
+                //rot.w = -BitConverter.ToSingle(data, 24);
+
+                rot.z = -BitConverter.ToSingle(data, 12);
                 rot.x = BitConverter.ToSingle(data, 16);
-                rot.y = BitConverter.ToSingle(data, 20);
+                rot.y = -BitConverter.ToSingle(data, 20);
                 rot.w = BitConverter.ToSingle(data, 24);
+
+                //Quaternion reverse = new Quaternion();
+                //reverse.x = - rot.x;
+                //reverse.y = - rot.y;  
+                //reverse.z = rot.z;
+                //reverse.w = rot.w;
+
+                rot = rot;
 
                 this.transform.position = pos;  
                 //rot = RosToUnityQuat * rot;  
