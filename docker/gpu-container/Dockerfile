@@ -287,6 +287,8 @@ RUN cd ~/catkin_ws \
 # RUN cd ~/catkin_ws \ 
 #     catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j20
 
+RUN cd ~/catkin_ws/src \
+    && git clone --recursive https://github.com/yv1es/darknet_ros.git
 
 # install realsense stream packet
 RUN cd ~/catkin_ws/src \
