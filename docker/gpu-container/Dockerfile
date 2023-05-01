@@ -1,8 +1,6 @@
 
 FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu20.04
 
-# FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
-
 # install basic tools
 RUN apt update \
  && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
@@ -16,18 +14,24 @@ RUN apt update \
     python3 \
     python3-dev \
     python3-pip \
-    python3-testresources 
+    python3-testresources \
+    python3-tk
 
+
+
+# downgrade numpy (for gluoncv)
+RUN pip uninstall -y numpy && pip install numpy==1.23.1
  
-# Install newer version of cmake
-# RUN sudo apt purge --auto-remove cmake \
-#     && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
-#     && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
-#     && sudo apt update \
-#     && sudo apt install -y cmake cmake-curses-gui
+
+# Install newer version of cmake necessary for Open3d
+RUN sudo apt purge -y --auto-remove cmake \
+    && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+    && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
+    && sudo apt update \
+    && sudo apt install -y cmake cmake-curses-gui
 
 
-# # install ROS noetic
+# install ROS noetic
 RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
     && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add - 
 
@@ -42,8 +46,10 @@ RUN apt update \
     python3-rosinstall-generator \  
     python3-wstool \
     python3-pip \
+    python3-tk \
     build-essential \
-    git
+    git \
+    ros-noetic-rosbash
 
 RUN sudo rosdep init && rosdep update
 
@@ -54,92 +60,15 @@ RUN mkdir -p ~/catkin_ws/src \
     && cd ~/catkin_ws \
     && catkin_make
 
-# # add source commands to bashrc 
+# add source commands to bashrc 
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc 
 RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 
 
-# # Qt5 Qhull boost etc.
-# RUN apt update \
-#     && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
-#     build-essential g++ autotools-dev libicu-dev libbz2-dev libboost-all-dev \
-#      qtbase5-dev  qtdeclarative5-dev qtquickcontrols2-5-dev libqt5opengl5-dev \
-#      libqhull-dev \
-#      libblas-dev liblapack-dev libgmp3-dev libmpfr-dev libopenblas-dev
 
 
-# # Eigen
-# RUN cd ~ \
-#     && git clone https://gitlab.com/libeigen/eigen.git \
-#     && cd ~/eigen \
-#     && git checkout 3.4.0 \
-#     && mkdir build \
-#     && cd build \
-#     && cmake -D CMAKE_BUILD_TYPE=RELEASE .. 
-
-# RUN cd ~/eigen/build \
-#     && make -j20 \
-#     && make install 
-
-
-
-# # SuitSparse
-# RUN cd ~ \
-#     && git clone https://github.com/DrTimothyAldenDavis/SuiteSparse.git
-
-# RUN cd ~/SuiteSparse \
-#     && git checkout stable \
-#     # fix a bug where cublas is not found  Install cuda later
-#     && ln -s /usr/local/cuda-11.7/targets/x86_64-linux/include/cublas_v2.h  /usr/include/cublas_v2.h  \   
-#     && ln -s /usr/local/cuda-11.7/targets/x86_64-linux/include/cublas_api.h  /usr/include/cublas_api.h  \
-#     && CMAKE_OPTIONS="-DENABLE_CUDA=OFF  \
-#                       -DSUITESPARSE_CUDA_ARCHITECTURES=30,35,50,52,60,61,70,75,86 \
-#                       -DCUDA_INCLUDE_DIRS=/usr/local/cuda-11.7/include \
-#                       -DBLA_VENDOR=OpenBLAS \
-#                      " make global -j20 \
-#     && make install 
-
-
-
-# # G2O
-# RUN cd ~ \
-#     && git clone https://github.com/RainerKuemmerle/g2o.git 
-
-# RUN cd ~/g2o \
-#     && git checkout 20201223_git \
-#     && mkdir build \
-#     && cd build \
-#     && cmake -D G2O_FAST_MATH=ON \
-#              -D BUILD_WITH_MARCH_NATIVE=ON \ 
-#              -D CMAKE_BUILD_TYPE=RELEASE ..
-
-# RUN cd ~/g2o/build \
-#     && make -j20 \
-#     && make install 
-
-
-# # VTK 
-# # RUN cd ~ \
-# #     && git clone https://github.com/Kitware/VTK.git 
-
-# # RUN cd ~/VTK \
-# #     && git checkout v9.2.6 \
-# #     && mkdir build \
-# #     && cd build \
-# #     && cmake -D VTK_USE_CUDA=ON \
-# #              -D VTK_GROUP_ENABLE_Qt=YES \
-# #              -D VTK_MODULE_ENABLE_VTK_GUISupportQtQuick=DONT_WANT \
-# #              -D CMAKE_BUILD_TYPE=RELEASE .. 
-
-# # RUN cd ~/VTK/build \
-# #     && make -j20 \
-# #     && make install 
-
-
-
-
-# opencv gpu
+# opencv with cuda
 RUN sudo apt-get update \
     && sudo apt-get install -y libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
     libjpeg-dev libpng-dev libtiff-dev libatlas-base-dev gfortran libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
@@ -198,63 +127,65 @@ RUN cd ~/opencv-4.5.2 \
         -D PYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 \
         -D INSTALL_C_EXAMPLES=OFF ..
 
-        # -D WITH_QT=ON \
-        # -D BUILD_opencv_python3=ON \
-        # BUILD_opencv_rgbd=OFF
-        # -D BUILD_opencv_python=ON \
-        # -D WITH_PYTHON=ON \
-        # -D BUILD_opencv_python3=ON \
-        # -D OPENCV_PYTHON3_VERSION=ON \
-        
-        # -D PYTHON3_EXECUTABLE=/usr/bin/python3 \
-        # -D PYTHON_INCLUDE_DIR=/usr/include/python3.8 \
-        # -D PYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.8.so \
-        
-        # -D INSTALL_C_EXAMPLES=OFF .. 
     
 RUN cd ~/opencv-4.5.2/build \
-    && make -j10 
+    && make -j$(nproc)  
     
+
+
+
+
+# gluon cv
+RUN pip install mxnet-cu117 gluoncv
+RUN pip uninstall -y opencv-python opencv-contrib-python 
+
+
 RUN cd ~/opencv-4.5.2/build \
     && make install
 
 
+# ROS packages
+RUN pip install cvbridge3
 
 
 
+# Open3D with cuda
+RUN cd ~ \
+    && git clone https://github.com/isl-org/Open3D \
+    && cd ~/Open3D \
+    && git checkout v0.17.0
 
-# # PCL
-# # RUN sudo apt install -y libusb-1.0-0-dev libflann-dev
+RUN cd ~/Open3D \
+    && util/install_deps_ubuntu.sh assume-yes
 
-# # RUN cd ~ \
-# #     && git clone https://github.com/PointCloudLibrary/pcl.git 
+RUN cd ~/Open3D \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=RELEASE \
+        -D BUILD_CUDA_MODULE=ON \
+        -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -D BUILD_EXAMPLES=OFF ..
 
-# # RUN cd ~/pcl \
-# #     && git checkout pcl-1.13.0 \
-# #     && mkdir build \
-# #     && cd build \
-# #     && cmake -D BUILD_GPU=ON \
-# #         -D BUILD_CUDA=ON \
-# #         -D CMAKE_BUILD_TYPE=RELEASE .. 
+RUN cd ~/Open3D/build \
+    && make -j$(nproc) 
 
-# # RUN cd ~/pcl/build \
-# #     && make -j10 \
-# #     && make install 
+RUN cd ~/Open3D/build \
+    && make install \
+    && make python-package \
+    && pip install lib/python_package/
+
 
 
  
+
+
+# Install RTABmap 
 RUN sudo apt install -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
 RUN sudo apt remove -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
 
-# # Install RTABmap 
 RUN apt update \
     && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
     libsqlite3-dev  libproj-dev libqt5svg5-dev 
-
-
-
-# RUN sudo apt-get install -y libvtk7-dev libpcl-dev ros-noetic-pcl-ros
-
 
 RUN cd ~ \
     && git clone https://github.com/introlab/rtabmap.git rtabmap 
@@ -266,32 +197,19 @@ RUN cd ~/rtabmap/build \
 
 
 
-# RUN  cd ~/catkin_ws/src \
-#     && git clone https://github.com/ros-perception/perception_pcl.git \
-#     && cd ~/catkin_ws/src/perception_pcl \
-#     && git checkout melodic-devel
 
 
-# # rtabmap_ros
-RUN pip install cvbridge3
 
 RUN cd ~/catkin_ws \
     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
 
-# RUN cd ~/catkin_ws/src \
-#     && git clone https://github.com/ros-planning/navigation_msgs.git
-
-# RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs ros-noetic-pcl-msgs  ros-noetic-image-geometry ros-noetic-tf2-eigen
-
-# RUN cd ~/catkin_ws \ 
-#     catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j20
-
-
-# install realsense stream packet
 RUN cd ~/catkin_ws/src \
-    && git clone https://github.com/yv1es/MRMapper.git \
-    && . /opt/ros/noetic/setup.sh \
+    && git clone https://github.com/yv1es/MRMapper.git
+
+# install ROS packages
+RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
+
