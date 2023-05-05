@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.point_cloud2 import read_points
 from sensor_msgs import point_cloud2
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
@@ -34,8 +35,6 @@ def image_callback(data):
     if capture and image_msg is None:
         image_msg = data
 
-
-from sensor_msgs.point_cloud2 import read_points, create_cloud_xyz32
 
 
 def float_to_color(f):
@@ -152,13 +151,13 @@ def main():
         os.mkdir(subfolder)
 
 
-    # pcd
+    # save point cloud
     filename_pcl = "point_cloud.ply"
     filepath_pcl = os.path.join(subfolder, filename_pcl)
     pcd = ros_pointcloud_to_o3d(cloud_map_msg)
     o3d.io.write_point_cloud(filepath_pcl, pcd)
 
-    # img
+    # save camera image
     filename_img = "image.png"
     filepath_img = os.path.join(subfolder, filename_img)
     bridge = CvBridge()
@@ -166,23 +165,12 @@ def main():
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     cv2.imwrite(filepath_img, img)
 
-    # odom 
-    # position = odom_msg.pose.pose.position 
-    # orientation = odom_msg.pose.pose.orientation 
-    # odom_str = str([position.x, position.y, position.z, orientation.x, orientation.y, orientation.z, orientation.w])
-    # filename_odom = "odom.txt"
-    # filepath_odom = os.path.join(subfolder, filename_odom)
-    # with open(filepath_odom, "w") as f:
-    #     f.write(odom_str)
-
+    # convert odom_msg to camera transform matrix and save to file
     T = transform_from_odom(odom_msg)
     filename_odom = "odom"
     filepath_odom = os.path.join(subfolder, filename_odom)
     np.save(filepath_odom, T)
-    # odom_str = str(T)
-    # with open(filepath_odom, "w") as f:
-    #     f.write(odom_str)
-
+    
     rospy.loginfo("Saved to file")
 
 
