@@ -45,60 +45,112 @@ def main():
                             [0, 0, 1 ]])
 
     
-    # define thrustum 
-    corner_points = np.array([
+    # define camera frustum 
+    frame_corners = np.array([
         [0, 0], 
         [0, height-1], 
         [width-1, height-1], 
         [width-1, 0]])    
-    frustum = image_points_to_direction(corner_points, intrinsics, extrinsics, width, height) 
-    frustum *= 5
 
-    objt_points = np.array([
-        [108,13],
-        [281,57],
-        [280,204],
-        [112,190],
-        [112,212]
+
+    # bild
+    object_corners = np.array([
+        [104,15],
+        [280,15],
+        [280,200],
+        [110,200],
     ])
 
-    objt = image_points_to_direction(objt_points, intrinsics, extrinsics, width, height) 
-    objt *= 5
+    # couch 
+    # object_corners = np.array([
+    #     [210, 470],
+    #     [537, 109],
+    #     [707, 260],
+    #     [376, 635],
+    # ])
 
-    geoms = [pcd]
+    # bett
+    # object_corners = np.array([
+    #     [6,210],
+    #     [590,208],
+    #     [585,470],
+    #     [11, 470],
+    # ])
 
-    draw_vecs(frustum, geoms, [0, 0, 1], extrinsics)
-    draw_vecs(objt, geoms, [0,1,0], extrinsics)    
+    
+    object_frustum = frustum_mesh_from_image_coords(object_corners, 5, intrinsics, extrinsics, width, height)
+    object_ls = o3d.geometry.LineSet.create_from_triangle_mesh(object_frustum)
+    object_ls.paint_uniform_color((0, 0, 1))
 
-    o3d.visualization.draw_geometries(geoms)
+    mesh = o3d.t.geometry.TriangleMesh.from_legacy(object_frustum)
+    scene = o3d.t.geometry.RaycastingScene()
+    scene.add_triangles(mesh) 
 
-
-
-def draw_vecs(vectors, geoms, color, extrinsics):
-    for i in range(vectors.shape[0]):
-            start = np.zeros(3)
-            end = vectors[i] 
-            line = o3d.geometry.LineSet()
-            line.points = o3d.utility.Vector3dVector(np.array([start, end]))
-            line.lines = o3d.utility.Vector2iVector(np.array([[0, 1]]))
-            line.paint_uniform_color(color)
-            line.transform(extrinsics)
-            geoms.append(line)
+    signed_distance = scene.compute_signed_distance(np.array(pcd.points).astype(np.float32))
+    sd = signed_distance.numpy()
+    pcd_corp = pcd.select_by_index(np.where(sd <= 0)[0])
 
 
+    o3d.visualization.draw_geometries([pcd, object_ls])
+    o3d.visualization.draw_geometries([pcd_corp, object_ls])
+    
+    planar_patches = detect_planar_patches(pcd_corp)
+    o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
+    o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
 
+
+
+def detect_planar_patches(pcd):
+
+    pcd.estimate_normals()
+
+    oboxes = pcd.detect_planar_patches(
+        normal_variance_threshold_deg=70,
+        coplanarity_deg=70,
+        outlier_ratio=0.75,
+        min_plane_edge_length=1,
+        min_num_points=0,
+        search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
+
+    print("Detected {} patches".format(len(oboxes)))
+
+    geometries = []
+    for obox in oboxes:
+        mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
+        mesh.paint_uniform_color(obox.color)
+        geometries.append(mesh)
+        # geometries.append(obox)
+    # geometries.append(pcd)
+    return geometries
+    # o3d.visualization.draw_geometries(geometries)
+
+
+
+# origin is relative to the camera hence normally 0's 
+# the corners are also relative to the camera 
+def frustum_from_corners(origin, corners, extrinsics):
+    mesh = o3d.geometry.TriangleMesh()
+
+    faces = np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [3, 4, 1]])
+
+    mesh.vertices = o3d.utility.Vector3dVector(np.vstack((origin, corners)))
+    mesh.triangles = o3d.utility.Vector3iVector(np.array(faces))
+    mesh.transform(extrinsics)
+    
+    return mesh
+
+
+# takes 2D points from the image and gives a 3D mesh of the frustum projected in 3d 
+def frustum_mesh_from_image_coords(points, frustum_depth, intrinsics, extrinsics, width, height):
+    vecs = image_points_to_direction(points, intrinsics, extrinsics, width, height) 
+    vecs *= frustum_depth
+    mesh = frustum_from_corners(np.zeros(3), vecs, extrinsics)
+    return mesh
+
+
+
+# computes the direction unit vectors pointing from the camera to the points
 def image_points_to_direction(points, intrinsics, extrinsics, width, height):
-    """Takes an array of 2D point on the image plane and returns an array of 3D vectors 
-    which points from the camera into the direction of the point. 
-
-    Args:
-        points (n x 2 numpy array): 2D points  
-        intrinsics (3x3 numpy array): intrinsics matrix
-        extrinsics (4x4 numy array): extrinsics matrix
-        width (int): image plane width
-        height (int): image plane height
-    """
-    # camera parameters
     fx, fy = intrinsics[0,0], intrinsics[1,1]
     cx, cy = intrinsics[0,2], intrinsics[1,2]
     
