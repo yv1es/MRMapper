@@ -5,7 +5,6 @@ from sensor_msgs.msg import PointCloud2, Image
 from sensor_msgs import point_cloud2
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
-from sensor_msgs.point_cloud2 import read_points
 
 import struct
 import open3d as o3d
@@ -13,6 +12,7 @@ import numpy as np
 import os
 import datetime
 import cv2
+import tf
 
 capture = False
 cloud_map_msg= None
@@ -35,7 +35,7 @@ def image_callback(data):
         image_msg = data
 
 
-
+from sensor_msgs.point_cloud2 import read_points, create_cloud_xyz32
 
 
 def float_to_color(f):
@@ -96,7 +96,7 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     points = np.column_stack((x_vals, y_vals, z_vals))
 
     # Concatenate the R, G, and B arrays into a single array
-    colors = np.column_stack((r_vals, g_vals, b_vals))
+    colors = np.column_stack((b_vals, g_vals, r_vals))
 
     # Create an Open3D point cloud from the points and colors arrays
     pointcloud_o3d = o3d.geometry.PointCloud()
@@ -104,8 +104,18 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     pointcloud_o3d.colors = o3d.utility.Vector3dVector(colors / 255.0)
 
     return pointcloud_o3d
-    
 
+
+def transform_from_odom(odom):
+    # Extract position and orientation information from Odometry message
+   
+    position = odom.pose.pose.position
+    orientation = odom.pose.pose.orientation    
+    # Convert orientation from quaternion to euler angles
+    euler = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+    # Create 4x4 transform matrix
+    T = tf.transformations.compose_matrix(translate=[position.x, position.y, position.z], angles=euler)
+    return T
 
 
 def main():
@@ -127,40 +137,55 @@ def main():
 
     rospy.loginfo("Captured triplet")
 
-    # convert to open3d point cloud 
-    pcd = ros_pointcloud_to_o3d(cloud_map_msg)
-
-    # Create the point_cloud_data directory in the home directory if it doesn't exist
+    
     home_dir = os.path.expanduser("~")
     data_dir = os.path.join(home_dir, "point_cloud_data")
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
-    # Get the current date and time
     now = datetime.datetime.now()
     date_str = now.strftime("%Y-%m-%d_%H-%M-%S")
 
+    # Create subfolder with timestamp
+    subfolder = os.path.join(data_dir, date_str)
+    if not os.path.exists(subfolder):
+        os.mkdir(subfolder)
 
-    # Construct the filename for the point cloud
-    filename_pcl = f"point_cloud_{date_str}.ply"
-    filepath_pcl = os.path.join(data_dir, filename_pcl)
 
-    # Save the point cloud to the file
+    # pcd
+    filename_pcl = "point_cloud.ply"
+    filepath_pcl = os.path.join(subfolder, filename_pcl)
+    pcd = ros_pointcloud_to_o3d(cloud_map_msg)
     o3d.io.write_point_cloud(filepath_pcl, pcd)
 
-
-    # Construct the filename for the image
-    filename_img = f"image_{date_str}.png"
-    filepath_img = os.path.join(data_dir, filename_img)
-
+    # img
+    filename_img = "image.png"
+    filepath_img = os.path.join(subfolder, filename_img)
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(image_msg, desired_encoding="passthrough")
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     cv2.imwrite(filepath_img, img)
 
+    # odom 
+    # position = odom_msg.pose.pose.position 
+    # orientation = odom_msg.pose.pose.orientation 
+    # odom_str = str([position.x, position.y, position.z, orientation.x, orientation.y, orientation.z, orientation.w])
+    # filename_odom = "odom.txt"
+    # filepath_odom = os.path.join(subfolder, filename_odom)
+    # with open(filepath_odom, "w") as f:
+    #     f.write(odom_str)
+
+    T = transform_from_odom(odom_msg)
+    filename_odom = "odom"
+    filepath_odom = os.path.join(subfolder, filename_odom)
+    np.save(filepath_odom, T)
+    # odom_str = str(T)
+    # with open(filepath_odom, "w") as f:
+    #     f.write(odom_str)
 
     rospy.loginfo("Saved to file")
-    
-    # rospy.spin()
+
+
 
 if __name__ == '__main__':
     main()
