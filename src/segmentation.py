@@ -17,8 +17,9 @@ import datetime
 import cv2
 import tf
 import os
+import time
 
-FREQ = 1
+FREQ = 2
 
 # queue with (image, camera transform, point cloud)
 triplet_queue = queue.Queue()
@@ -168,19 +169,24 @@ def start_capture():
     T = transform_from_odom(odom_msg)
 
     # put in queue
-    triplet_queue.put((img, T, pcd))
+    # triplet_queue.put((img, T, pcd))
     rospy.loginfo("Captured triplet")
+    process_triplet(img, T, pcd)
 
 
 
 def process_triplet(img, T, pcd):
+    start_time = time.time()
     class_ids, confidences, boxes = yolo.predict(img)
-    rospy.loginfo(class_ids, confidences, boxes)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
+    
 
 
 
 def main():
-
+    global yolo
     yolo = Yolo()
 
     rospy.init_node('segmentation_node', anonymous=True)
@@ -190,14 +196,14 @@ def main():
 
     timer = rospy.Timer(rospy.Duration(FREQ), capture_callback)
 
-    while running:
-        try:
-            img, T, pcd = triplet_queue.get(timeout=1)
-            process_triplet(img, T, pcd)
-            triplet_queue.task_done()
-        except queue.Empty:
-            pass
-
+    # while running:
+    #     try:
+    #         img, T, pcd = triplet_queue.get(timeout=1)
+    #         process_triplet(img, T, pcd)
+    #         triplet_queue.task_done()
+    #     except queue.Empty:
+    #         pass
+    rospy.spin()
 
 
 
@@ -216,13 +222,13 @@ class Yolo():
             self.classes = [line.strip() for line in f.readlines()]        
 
         self.net = cv2.dnn.readNet(weights_path, config_path)
-
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         self.scale = 0.00392
 
 
 
     def predict(self, img):
-
         Width = img.shape[1]
         Height = img.shape[0]
         blob = cv2.dnn.blobFromImage(img, self.scale, (416,416), (0,0,0), True, crop=False)
@@ -262,7 +268,7 @@ class Yolo():
 
         return class_ids, confidences, boxes
 
-    def get_output_layers(net):
+    def get_output_layers(self, net):
         layer_names = net.getLayerNames()
         output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
         return output_layers
