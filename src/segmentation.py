@@ -19,13 +19,13 @@ import tf
 import os
 import time
 
-FREQ = 2
+FREQ = 5
 
 # queue with (image, camera transform, point cloud)
 triplet_queue = queue.Queue()
 lock = threading.Lock()
 capture = False
-cloud_map_msg= None
+cloud_map_msg = None
 odom_msg = None
 image_msg = None
 currently_capturing = False
@@ -120,7 +120,6 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     return pointcloud_o3d
 
 
-
 def transform_from_odom(odom):
     # Extract position and orientation information from Odometry message
    
@@ -131,7 +130,6 @@ def transform_from_odom(odom):
     # Create 4x4 transform matrix
     T = tf.transformations.compose_matrix(translate=[position.x, position.y, position.z], angles=euler)
     return T
-
 
 
 def capture_callback(event):
@@ -182,6 +180,13 @@ def process_triplet(img, T, pcd):
     elapsed_time = end_time - start_time
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
     
+    for i, box in enumerate(boxes):
+        class_id = class_ids[i]
+        confidence = confidences[i]
+        print(yolo.classes[class_id], confidence, box)
+        pcd_from_bb(box, T, pcd)
+        break
+
 
 
 
@@ -204,6 +209,126 @@ def main():
     #     except queue.Empty:
     #         pass
     rospy.spin()
+
+
+
+
+
+
+
+
+def pcd_from_bb(box, extrinsics, pcd):
+   
+    
+    # load intrinsic 
+    fx, fy = 618.2962646484375, 617.8786010742188
+    cx, cy = 316.1949462890625, 242.33355712890625
+    width, height = 640, 480
+    intrinsics = np.array([[fx, 0, cx], 
+                            [0, fy, cy], 
+                            [0, 0, 1 ]])
+
+
+    x1, y1, x2, y2 = box
+    # bett
+    object_corners =  np.array([
+        [x1, y1],
+        [x2, y1],
+        [x2, y2],
+        [x1, y2]
+    ])
+
+    
+    object_frustum = frustum_mesh_from_image_coords(object_corners, 5, intrinsics, extrinsics, width, height)
+    object_ls = o3d.geometry.LineSet.create_from_triangle_mesh(object_frustum)
+    object_ls.paint_uniform_color((0, 0, 1))
+
+    mesh = o3d.t.geometry.TriangleMesh.from_legacy(object_frustum)
+    scene = o3d.t.geometry.RaycastingScene()
+    scene.add_triangles(mesh) 
+
+    signed_distance = scene.compute_signed_distance(np.array(pcd.points).astype(np.float32))
+    sd = signed_distance.numpy()
+    pcd_corp = pcd.select_by_index(np.where(sd <= 0)[0])
+
+
+    # o3d.visualization.draw_geometries([pcd, object_ls])
+    # o3d.visualization.draw_geometries([pcd_corp, object_ls])
+    
+    planar_patches = detect_planar_patches(pcd_corp)
+    # o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
+    o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
+
+
+
+def detect_planar_patches(pcd):
+
+    pcd.estimate_normals()
+
+    oboxes = pcd.detect_planar_patches(
+        normal_variance_threshold_deg=70,
+        coplanarity_deg=70,
+        outlier_ratio=0.75,
+        min_plane_edge_length=1,
+        min_num_points=0,
+        search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
+    print("Detected {} patches".format(len(oboxes)))
+
+    geometries = []
+    for obox in oboxes:
+        mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
+        mesh.paint_uniform_color(obox.color)
+        geometries.append(mesh)
+        # geometries.append(obox)
+    return geometries
+
+
+
+# origin is relative to the camera hence normally 0's 
+# the corners are also relative to the camera 
+def frustum_from_corners(origin, corners, extrinsics):
+    mesh = o3d.geometry.TriangleMesh()
+
+    faces = np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [3, 4, 1]])
+
+    mesh.vertices = o3d.utility.Vector3dVector(np.vstack((origin, corners)))
+    mesh.triangles = o3d.utility.Vector3iVector(np.array(faces))
+    mesh.transform(extrinsics)
+    
+    return mesh
+
+
+# takes 2D points from the image and gives a 3D mesh of the frustum projected in 3d 
+def frustum_mesh_from_image_coords(points, frustum_depth, intrinsics, extrinsics, width, height):
+    vecs = image_points_to_direction(points, intrinsics, extrinsics, width, height) 
+    vecs *= frustum_depth
+    mesh = frustum_from_corners(np.zeros(3), vecs, extrinsics)
+    return mesh
+
+
+
+# computes the direction unit vectors pointing from the camera to the points
+def image_points_to_direction(points, intrinsics, extrinsics, width, height):
+    fx, fy = intrinsics[0,0], intrinsics[1,1]
+    cx, cy = intrinsics[0,2], intrinsics[1,2]
+    
+    p = points.astype(float).copy()
+    
+    p[:,0] = (p[:,0] - cx) / fx
+    p[:,1] = (p[:,1] - cy) / fy 
+
+    vectors = np.hstack([-np.ones((p.shape[0], 1)), p])
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    vectors = -vectors / norms
+
+    return vectors
+
+
+
+
+
+
+
 
 
 
@@ -244,7 +369,7 @@ class Yolo():
         class_ids = []
         confidences = []
         boxes = []
-        conf_threshold = 0.5
+        conf_threshold = 0.8
         nms_threshold = 0.4
 
         # for each detetion from each output layer 
@@ -272,11 +397,6 @@ class Yolo():
         layer_names = net.getLayerNames()
         output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
         return output_layers
-
-
-
-
-
 
 
 
