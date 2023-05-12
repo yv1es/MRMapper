@@ -196,3 +196,8 @@ RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
+
+
+
+RUN cd ~/catkin_ws/src/MRMapper/src/yolo \
+    && wget https://pjreddie.com/media/files/yolov3.weights

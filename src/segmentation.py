@@ -16,7 +16,7 @@ import os
 import datetime
 import cv2
 import tf
-
+import os
 
 FREQ = 1
 
@@ -29,6 +29,9 @@ odom_msg = None
 image_msg = None
 currently_capturing = False
 bridge = CvBridge()
+running = True
+yolo = None
+
 
 def cloud_map_callback(data):
     global cloud_map_msg
@@ -134,13 +137,11 @@ def capture_callback(event):
     global lock
 
     # Attempt to acquire the lock
-    if not lock.try_acquire():
-        rospy.loginfo("Could not aquire lock")
+    if not lock.acquire(blocking=False):
         return
     else:
         try:
             start_capture()
-            pass
         finally:
             lock.release()
 
@@ -172,7 +173,16 @@ def start_capture():
 
 
 
+def process_triplet(img, T, pcd):
+    class_ids, confidences, boxes = yolo.predict(img)
+    rospy.loginfo(class_ids, confidences, boxes)
+
+
+
 def main():
+
+    yolo = Yolo()
+
     rospy.init_node('segmentation_node', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)
     rospy.Subscriber('/rtabmap/odom', Odometry, odom_callback)
@@ -180,13 +190,10 @@ def main():
 
     timer = rospy.Timer(rospy.Duration(FREQ), capture_callback)
 
-    running = True
-
-    # rospy.spin()
     while running:
         try:
             img, T, pcd = triplet_queue.get(timeout=1)
-            print(type(img), type(T), type(pcd))
+            process_triplet(img, T, pcd)
             triplet_queue.task_done()
         except queue.Empty:
             pass
@@ -194,5 +201,86 @@ def main():
 
 
 
+
+class Yolo():
+
+    def __init__(self) -> None:
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        yolo_dir = os.path.join(current_path, 'yolo') 
+        classes_path = os.path.join(yolo_dir, 'yolov3.txt')
+        weights_path = os.path.join(yolo_dir, 'yolov3.weights')
+        config_path = os.path.join(yolo_dir, 'yolov3.cfg')
+
+        # read class names from text file
+        with open(classes_path, 'r') as f:
+            self.classes = [line.strip() for line in f.readlines()]        
+
+        self.net = cv2.dnn.readNet(weights_path, config_path)
+
+        self.scale = 0.00392
+
+
+
+    def predict(self, img):
+
+        Width = img.shape[1]
+        Height = img.shape[0]
+        blob = cv2.dnn.blobFromImage(img, self.scale, (416,416), (0,0,0), True, crop=False)
+
+        # set input blob for the network
+        self.net.setInput(blob)
+
+        # run inference through the network
+        # and gather predictions from output layers
+        outs = self.net.forward(self.get_output_layers(self.net))
+
+        # initialization
+        class_ids = []
+        confidences = []
+        boxes = []
+        conf_threshold = 0.5
+        nms_threshold = 0.4
+
+        # for each detetion from each output layer 
+        # get the confidence, class id, bounding box params
+        # and ignore weak detections (confidence < 0.5)
+        for out in outs:
+            for detection in out:
+                scores = detection[5:]
+                class_id = np.argmax(scores)
+                confidence = scores[class_id]
+                if confidence > conf_threshold:
+                    center_x = int(detection[0] * Width)
+                    center_y = int(detection[1] * Height)
+                    w = int(detection[2] * Width)
+                    h = int(detection[3] * Height)
+                    x = center_x - w / 2
+                    y = center_y - h / 2
+                    class_ids.append(class_id)
+                    confidences.append(float(confidence))
+                    boxes.append([x, y, w, h])
+
+        return class_ids, confidences, boxes
+
+    def get_output_layers(net):
+        layer_names = net.getLayerNames()
+        output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+        return output_layers
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        running = False
+
+
