@@ -46,11 +46,11 @@ def main():
 
     
     # define camera frustum 
-    frame_corners = np.array([
-        [0, 0], 
-        [0, height-1], 
-        [width-1, height-1], 
-        [width-1, 0]])    
+    # frame_corners = np.array([
+    #     [0, 0], 
+    #     [0, height-1], 
+    #     [width-1, height-1], 
+    #     [width-1, 0]])    
 
 
     # bild
@@ -62,12 +62,12 @@ def main():
     ])
 
     # couch 
-    # object_corners = np.array([
-    #     [210, 470],
-    #     [537, 109],
-    #     [707, 260],
-    #     [376, 635],
-    # ])
+    object_corners = np.array([
+        [210, 470],
+        [537, 109],
+        [707, 260],
+        [376, 635],
+    ])
 
     # bett
     # object_corners = np.array([
@@ -91,11 +91,11 @@ def main():
     pcd_corp = pcd.select_by_index(np.where(sd <= 0)[0])
 
 
-    o3d.visualization.draw_geometries([pcd, object_ls])
-    o3d.visualization.draw_geometries([pcd_corp, object_ls])
+    # o3d.visualization.draw_geometries([pcd, object_ls])
+    # o3d.visualization.draw_geometries([pcd_corp, object_ls])
     
     planar_patches = detect_planar_patches(pcd_corp)
-    o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
+    # o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
     o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
 
 
@@ -111,7 +111,6 @@ def detect_planar_patches(pcd):
         min_plane_edge_length=1,
         min_num_points=0,
         search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
-
     print("Detected {} patches".format(len(oboxes)))
 
     geometries = []
@@ -120,9 +119,7 @@ def detect_planar_patches(pcd):
         mesh.paint_uniform_color(obox.color)
         geometries.append(mesh)
         # geometries.append(obox)
-    # geometries.append(pcd)
     return geometries
-    # o3d.visualization.draw_geometries(geometries)
 
 
 
