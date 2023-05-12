@@ -9,7 +9,7 @@
     <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node>
 
     <!-- Launch unity subscriber -->
-    <!-- <node name="unity_subscriber" pkg="MRMapper" type="unity_subscriber.py" output="screen"></node>  -->
+    <node name="unity_subscriber" pkg="MRMapper" type="unity_subscriber.py" output="screen"></node> 
 
     <!-- Launch segmentation -->
     <node name="segmentation" pkg="MRMapper" type="segmentation.py" output="screen"></node> 
