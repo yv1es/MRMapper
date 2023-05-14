@@ -17,6 +17,15 @@ RUN apt update \
     python3-testresources 
 
  
+
+# Install newer version of cmake necessary for Open3d
+RUN sudo apt purge -y --auto-remove cmake \
+    && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+    && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
+    && sudo apt update \
+    && sudo apt install -y cmake cmake-curses-gui
+
+
 # install ROS noetic
 RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
     && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add - 
@@ -49,6 +58,9 @@ RUN mkdir -p ~/catkin_ws/src \
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc 
 RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
+
+# install MXnet and gluoncv
+RUN pip install mxnet-cu102mkl gluoncv
 
 
 # opencv with cuda
@@ -121,13 +133,6 @@ RUN cd ~/opencv-4.5.2/build \
 
 
 
-# Install newer version of cmake necessary for Open3d
-RUN sudo apt purge -y --auto-remove cmake \
-    && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
-    && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
-    && sudo apt update \
-    && sudo apt install -y cmake cmake-curses-gui
-
 
 
 
@@ -184,9 +189,6 @@ RUN pip install cvbridge3
 RUN cd ~/catkin_ws \
     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
-
-RUN cd ~/catkin_ws/src \
-    && git clone --recursive https://github.com/yv1es/darknet_ros.git
 
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/MRMapper.git

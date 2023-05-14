@@ -7,6 +7,10 @@ from sensor_msgs import point_cloud2
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
 
+import mxnet as mx
+from gluoncv import model_zoo, data, utils
+import matplotlib.pyplot as plt
+
 import struct
 import threading
 import queue
@@ -18,6 +22,10 @@ import cv2
 import tf
 import os
 import time
+
+
+
+net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)
 
 FREQ = 5
 
@@ -173,20 +181,46 @@ def start_capture():
 
 
 
+
 def process_triplet(img, T, pcd):
     start_time = time.time()
-    class_ids, confidences, boxes = yolo.predict(img)
+
+    # class_ids, confidences, boxes = yolo.predict(img)
+    
+    x, img = data.transforms.presets.yolo.load_test(img, short=512)
+
+    # Run object detection
+    class_ids, confidences, boxes = net(x)
+
+    
+    
     end_time = time.time()
     elapsed_time = end_time - start_time
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
     
+    
+
+    clouds = []
+    patches = []
+
     for i, box in enumerate(boxes):
         class_id = class_ids[i]
         confidence = confidences[i]
         print(yolo.classes[class_id], confidence, box)
-        pcd_from_bb(box, T, pcd)
-        break
+        pcd_bb = pcd_from_bb(box, T, pcd)
+        clouds.append(pcd_bb)
+        patches += detect_planar_patches(pcd_bb)
 
+        x1, y1, x2, y2 = box
+        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+    
+    cv2.imshow('Image with bounding box', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    # o3d.visualization.draw_geometries([pcd] + patches)
+    # if len(patches) > 0:
+    #     o3d.visualization.draw_geometries([pcd, patches[0]])
+    
 
 
 
@@ -230,7 +264,7 @@ def pcd_from_bb(box, extrinsics, pcd):
 
 
     x1, y1, x2, y2 = box
-    # bett
+    
     object_corners =  np.array([
         [x1, y1],
         [x2, y1],
@@ -249,16 +283,15 @@ def pcd_from_bb(box, extrinsics, pcd):
 
     signed_distance = scene.compute_signed_distance(np.array(pcd.points).astype(np.float32))
     sd = signed_distance.numpy()
-    pcd_corp = pcd.select_by_index(np.where(sd <= 0)[0])
-
+    pcd_bb = pcd.select_by_index(np.where(sd <= 0)[0])
+    return pcd_bb
 
     # o3d.visualization.draw_geometries([pcd, object_ls])
     # o3d.visualization.draw_geometries([pcd_corp, object_ls])
     
-    planar_patches = detect_planar_patches(pcd_corp)
+    # planar_patches = detect_planar_patches(pcd_corp)
     # o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
-    o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
-
+    # o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
 
 
 def detect_planar_patches(pcd):
@@ -333,6 +366,8 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 
+
+
 class Yolo():
 
     def __init__(self) -> None:
@@ -369,7 +404,7 @@ class Yolo():
         class_ids = []
         confidences = []
         boxes = []
-        conf_threshold = 0.8
+        conf_threshold = 0.6
         nms_threshold = 0.4
 
         # for each detetion from each output layer 
