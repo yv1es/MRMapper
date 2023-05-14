@@ -41,6 +41,7 @@ RUN apt update \
     python3-rosinstall-generator \  
     python3-wstool \
     python3-pip \
+    python3-tk \
     build-essential \
     git \
     ros-noetic-rosbash
@@ -60,7 +61,10 @@ RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 
 # install MXnet and gluoncv
-RUN pip install mxnet-cu102mkl gluoncv
+RUN sudo apt -y install python3-tk
+RUN pip uninstall -y numpy &&  pip install numpy==1.23.1
+RUN pip install mxnet-cu117 gluoncv
+RUN pip uninstall -y opencv-python opencv-contrib-python 
 
 
 # opencv with cuda

@@ -185,19 +185,30 @@ def start_capture():
 def process_triplet(img, T, pcd):
     start_time = time.time()
 
-    # class_ids, confidences, boxes = yolo.predict(img)
-    
-    x, img = data.transforms.presets.yolo.load_test(img, short=512)
+    # class_ids, confidences, boxes = yolo.predict(img)  
+    x, tmp_img = data.transforms.presets.yolo.transform_test(mx.nd.array(img), short=512)
 
-    # Run object detection
+    scale = (np.array(img.shape) / np.array(tmp_img.shape))[:2]
+
     class_ids, confidences, boxes = net(x)
 
-    
-    
+    class_ids = class_ids.asnumpy().reshape(100, 1)
+    confidences = confidences.asnumpy().reshape(100, 1)
+    boxes = boxes.asnumpy().reshape(100, 4)
+
+    boxes[:, 0] *= scale[0]
+    boxes[:, 2] *= scale[0]
+    boxes[:, 1] *= scale[1]
+    boxes[:, 3] *= scale[1]
+
+    idx = np.where(confidences < 0.2)[0][0]
+    class_ids = class_ids[:idx]
+    confidences = confidences[:idx]
+    boxes = boxes[:idx]
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
-    
     
 
     clouds = []
@@ -206,7 +217,7 @@ def process_triplet(img, T, pcd):
     for i, box in enumerate(boxes):
         class_id = class_ids[i]
         confidence = confidences[i]
-        print(yolo.classes[class_id], confidence, box)
+        print(class_id, confidence, box)
         pcd_bb = pcd_from_bb(box, T, pcd)
         clouds.append(pcd_bb)
         patches += detect_planar_patches(pcd_bb)
@@ -217,9 +228,9 @@ def process_triplet(img, T, pcd):
     cv2.imshow('Image with bounding box', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    # o3d.visualization.draw_geometries([pcd] + patches)
-    # if len(patches) > 0:
-    #     o3d.visualization.draw_geometries([pcd, patches[0]])
+
+    o3d.visualization.draw_geometries([pcd] + patches)
+    
     
 
 
