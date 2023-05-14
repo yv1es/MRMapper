@@ -128,7 +128,7 @@ RUN cd ~/opencv-4.5.2 \
 
     
 RUN cd ~/opencv-4.5.2/build \
-    && make -j10 
+    && make -j$(nproc)  
     
 RUN cd ~/opencv-4.5.2/build \
     && make install
@@ -168,7 +168,7 @@ RUN cd ~/Open3D/build \
  
 
 
-# # Install RTABmap 
+# Install RTABmap 
 RUN sudo apt install -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
 RUN sudo apt remove -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
 
@@ -202,8 +202,3 @@ RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
-
-
-
-RUN cd ~/catkin_ws/src/MRMapper/src/yolo \
-    && wget https://pjreddie.com/media/files/yolov3.weights

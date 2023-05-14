@@ -192,7 +192,7 @@ def process_triplet(img, T, pcd):
 
     class_ids, confidences, boxes = net(x)
 
-    class_ids = class_ids.asnumpy().reshape(100, 1)
+    class_ids = class_ids.asnumpy().reshape(100, 1).astype(np.int32)
     confidences = confidences.asnumpy().reshape(100, 1)
     boxes = boxes.asnumpy().reshape(100, 4)
 
@@ -209,7 +209,7 @@ def process_triplet(img, T, pcd):
     end_time = time.time()
     elapsed_time = end_time - start_time
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
-    
+
 
     clouds = []
     patches = []
@@ -222,23 +222,43 @@ def process_triplet(img, T, pcd):
         clouds.append(pcd_bb)
         patches += detect_planar_patches(pcd_bb)
 
-        x1, y1, x2, y2 = box
-        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-    
-    cv2.imshow('Image with bounding box', img)
+        # cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+
+    bb_img = draw_boxes(img, class_ids, confidences, boxes, classes)    
+    cv2.imshow('Image with bounding box', bb_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
     o3d.visualization.draw_geometries([pcd] + patches)
     
+
+def draw_boxes(image, class_ids, confidences, boxes, classes):
+    # Define some colors
+    colors = np.random.uniform(0, 255, size=(len(classes), 3))
+
+    # Loop over all detections and draw the bounding boxes
+    for class_id, confidence, box in zip(class_ids, confidences, boxes):
+        x1, y1, x2, y2 = box.astype(np.int32)
+
+        # Get the class label and color
+        class_label = classes[int(class_id)]
+        color = colors[int(class_id)]
+
+        # Draw the bounding box
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+
+        # Draw the label and confidence
+        label = "{}: {}".format(class_label, confidence)
+        cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    return image
     
 
 
 
 def main():
     global yolo
-    yolo = Yolo()
-
+    
     rospy.init_node('segmentation_node', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)
     rospy.Subscriber('/rtabmap/odom', Odometry, odom_callback)
@@ -372,77 +392,88 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 
+classes = [ 'person',
+    'bicycle',
+    'car',
+    'motorcycle',
+    'airplane',
+    'bus',
+    'train',
+    'truck',
+    'boat',
+    'traffic light',
+    'fire hydrant',
+    'stop sign',
+    'parking meter',
+    'bench',
+    'bird',
+    'cat',
+    'dog',
+    'horse',
+    'sheep',
+    'cow',
+    'elephant',
+    'bear',
+    'zebra',
+    'giraffe',
+    'backpack',
+    'umbrella',
+    'handbag',
+    'tie',
+    'suitcase',
+    'frisbee',
+    'skis',
+    'snowboard',
+    'sports ball',
+    'kite',
+    'baseball bat',
+    'baseball glove',
+    'skateboard',
+    'surfboard',
+    'tennis racket',
+    'bottle',
+    'wine glass',
+    'cup',
+    'fork',
+    'knife',
+    'spoon',
+    'bowl',
+    'banana',
+    'apple',
+    'sandwich',
+    'orange',
+    'broccoli',
+    'carrot',
+    'hot dog',
+    'pizza',
+    'donut',
+    'cake',
+    'chair',
+    'couch',
+    'potted plant',
+    'bed',
+    'dining table',
+    'toilet',
+    'tv',
+    'laptop',
+    'mouse',
+    'remote',
+    'keyboard',
+    'cell phone',
+    'microwave',
+    'oven',
+    'toaster',
+    'sink',
+    'refrigerator',
+    'book',
+    'clock',
+    'vase',
+    'scissors',
+    'teddy bear',
+    'hair drier',
+    'toothbrush']
 
 
-
-
-
-
-
-class Yolo():
-
-    def __init__(self) -> None:
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        yolo_dir = os.path.join(current_path, 'yolo') 
-        classes_path = os.path.join(yolo_dir, 'yolov3.txt')
-        weights_path = os.path.join(yolo_dir, 'yolov3.weights')
-        config_path = os.path.join(yolo_dir, 'yolov3.cfg')
-
-        # read class names from text file
-        with open(classes_path, 'r') as f:
-            self.classes = [line.strip() for line in f.readlines()]        
-
-        self.net = cv2.dnn.readNet(weights_path, config_path)
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-        self.scale = 0.00392
-
-
-
-    def predict(self, img):
-        Width = img.shape[1]
-        Height = img.shape[0]
-        blob = cv2.dnn.blobFromImage(img, self.scale, (416,416), (0,0,0), True, crop=False)
-
-        # set input blob for the network
-        self.net.setInput(blob)
-
-        # run inference through the network
-        # and gather predictions from output layers
-        outs = self.net.forward(self.get_output_layers(self.net))
-
-        # initialization
-        class_ids = []
-        confidences = []
-        boxes = []
-        conf_threshold = 0.6
-        nms_threshold = 0.4
-
-        # for each detetion from each output layer 
-        # get the confidence, class id, bounding box params
-        # and ignore weak detections (confidence < 0.5)
-        for out in outs:
-            for detection in out:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > conf_threshold:
-                    center_x = int(detection[0] * Width)
-                    center_y = int(detection[1] * Height)
-                    w = int(detection[2] * Width)
-                    h = int(detection[3] * Height)
-                    x = center_x - w / 2
-                    y = center_y - h / 2
-                    class_ids.append(class_id)
-                    confidences.append(float(confidence))
-                    boxes.append([x, y, w, h])
-
-        return class_ids, confidences, boxes
-
-    def get_output_layers(self, net):
-        layer_names = net.getLayerNames()
-        output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
-        return output_layers
 
 
 
