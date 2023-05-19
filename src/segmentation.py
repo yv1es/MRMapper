@@ -474,7 +474,7 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 planes = np.array([ [[0., 0., 0.], [0., 0., 1.], [0., 1., 0.], [0., 1., 1.]],
-                    [[1., 0., 0.], [1., 0., 1.], [1., 1., 0.], [1., 1., 1.]] ])
+                    [[1., 0., 0.], [1., 0., 1.], [1., 1., 0.], [1., 1., 1.]] ]).astype(np.float32)
     
 
 def send_planes():
