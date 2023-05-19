@@ -96,6 +96,7 @@ class UnitySender:
     def stop(self):
         self.running = False
         self.conn.close()
+        self.socket.close()
 
 
 
