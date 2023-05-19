@@ -19,6 +19,7 @@ public class ReceivePlanes : MonoBehaviour
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private Receiver receiver;
 
+    //private List<GameObject> gameObjects; 
 
     public void Start()
     {
@@ -29,8 +30,6 @@ public class ReceivePlanes : MonoBehaviour
         Action<byte[]> callback = (data) => {
             runOnMainThread.Enqueue(
             () => {
-
-                Debug.Log("Got message");
 
                 List<Vector3[]> planes = new List<Vector3[]>();
 
@@ -50,8 +49,7 @@ public class ReceivePlanes : MonoBehaviour
                     planes.Add(p);  
                 }
 
-                Debug.Log(planes); 
-
+             
                 foreach (var plane in planes)
                 {
                     RenderPlanarPatch(plane); 
@@ -80,37 +78,80 @@ public class ReceivePlanes : MonoBehaviour
 
     private void RenderPlanarPatch(Vector3[] edgePoints)
     {
-        // Create a new game object to represent the planar patch
-        GameObject planarPatchObject = new GameObject("PlanarPatch");
+        // Sort the points based on their coordinates
+        Array.Sort(edgePoints, new Vector3Comparer());
 
-        // Create a mesh filter and renderer component for the game object
-        MeshFilter meshFilter = planarPatchObject.AddComponent<MeshFilter>();
-        MeshRenderer meshRenderer = planarPatchObject.AddComponent<MeshRenderer>();
+        // Create a new game object and add necessary components
+        GameObject rectangleObject = new GameObject("Rectangle");
+        rectangleObject.AddComponent<MeshFilter>();
+        rectangleObject.AddComponent<MeshRenderer>();
 
-        // Create a mesh with the edge points
-        Mesh mesh = new Mesh();
-        mesh.vertices = edgePoints;
+        // Set the rectangle material
+        MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();
 
-        // Define the triangle indices
-        int[] triangleIndices = new int[] { 0, 1, 2, 0, 2, 3 };
-        mesh.triangles = triangleIndices;
+        // Create the mesh for the rectangle
+        Mesh rectangleMesh = new Mesh();
 
-        // Calculate vertex normals (assuming planar patch is not bent)
-        Vector3 normal = Vector3.Cross(edgePoints[1] - edgePoints[0], edgePoints[2] - edgePoints[0]).normalized;
-        Vector3[] normals = new Vector3[] { normal, normal, normal, normal };
-        mesh.normals = normals;
+        // Assign the vertices to the mesh
+        rectangleMesh.vertices = edgePoints;
+
+        // Define the indices for the triangles
+        int[] indices = new int[]
+        {
+            0, 2, 3, 1, 0, 3,
+            2, 0, 3, 0, 1, 3,
+
+        };
+
+        // Assign the indices to the mesh
+        rectangleMesh.triangles = indices;
+
+        // Calculate the normals and bounds for the mesh
+        rectangleMesh.RecalculateNormals();
+        rectangleMesh.RecalculateBounds();
 
         // Assign the mesh to the mesh filter
-        meshFilter.mesh = mesh;
-
-        // Add a default material to the mesh renderer
-        meshRenderer.material = new Material(Shader.Find("Standard"));
+        MeshFilter meshFilter = rectangleObject.GetComponent<MeshFilter>();
+        meshFilter.sharedMesh = rectangleMesh;
     }
+
+
+
+
 
 
     private void OnDestroy()
     {
         receiver.Stop();
+    }
+}
+
+
+
+
+public class Vector3Comparer : IComparer<Vector3>
+{
+    public int Compare(Vector3 a, Vector3 b)
+    {
+        // Compare x component
+        if (a.x < b.x)
+            return -1;
+        else if (a.x > b.x)
+            return 1;
+
+        // Compare y component
+        if (a.y < b.y)
+            return -1;
+        else if (a.y > b.y)
+            return 1;
+
+        // Compare z component
+        if (a.z < b.z)
+            return -1;
+        else if (a.z > b.z)
+            return 1;
+
+        return 0; // Vectors are equal
     }
 }
 

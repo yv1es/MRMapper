@@ -211,11 +211,6 @@ def process_triplet(img, T, pcd):
     boxes = boxes[:idx]
 
 
-    clouds = []
-    patches = []
-    inliers = []
-    hulls = []
-
     for i in range(len(class_ids)):
         class_id = class_ids[i]
         confidence = confidences[i]
@@ -242,10 +237,21 @@ def process_triplet(img, T, pcd):
         if  len(pcd_bb.points) < 20:
             continue 
 
-        patches += detect_planar_patches(pcd_bb)
-        # inlier_cloud, hull = segment_plane(pcd_bb)
+        oboxes = detect_planar_patches(pcd_bb)
         
-        clouds.append(pcd_bb)
+        for obox in oboxes: 
+            corners = obox_to_corners(obox)
+
+            print(corners)
+            print(type(corners))
+            # points = obox.get_box_points()
+            # print(points)
+            # points = np.stack([np.array(vec) for vec in points], axis=1)
+            # print(points)
+            # # inlier_cloud, hull = segment_plane(pcd_bb)
+            # points = points[:-1,:]
+            # print(points)
+            # clouds.append(pcd_bb)
         # inliers.append(inlier_cloud)
         # hulls.append(hull)
 
@@ -255,15 +261,17 @@ def process_triplet(img, T, pcd):
     end_time = time.time()
     elapsed_time = end_time - start_time
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
+    
+    
+
+
 
     # draw the bounding boxes
-    bb_img = draw_boxes(img, class_ids, confidences, boxes, classes)    
-    cv2.imshow('Image with bounding box', bb_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # bb_img = draw_boxes(img, class_ids, confidences, boxes, classes)    
+    # cv2.imshow('Image with bounding box', bb_img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
-    if len(patches) > 0:
-        o3d.visualization.draw_geometries([pcd] + patches)
     
 
 
@@ -290,8 +298,31 @@ def draw_boxes(image, class_ids, confidences, boxes, classes):
     
 
 
+def obox_to_corners(obb):
+    # Assuming you have an Open3D oriented bounding box object named 'obb'
 
+    # Retrieve the center, size, and orientation of the OBB
+    center = obb.get_center()
+    size = obb.get_max_extent()
+    rotation_matrix = obb.get_rotation_matrix()
 
+    # Identify the shortest edge
+    shortest_edge_index = np.argmin(size)
+
+    # Compute the new rectangle's dimensions
+    new_size = np.copy(size)
+    new_size[shortest_edge_index] = 0.0
+
+    # Calculate the four corner points of the rectangle
+    half_size = new_size / 2.0
+    corners = [
+        center + np.dot(rotation_matrix, [-half_size[0], -half_size[1], -half_size[2]]),
+        center + np.dot(rotation_matrix, [half_size[0], -half_size[1], -half_size[2]]),
+        center + np.dot(rotation_matrix, [half_size[0], half_size[1], -half_size[2]]),
+        center + np.dot(rotation_matrix, [-half_size[0], half_size[1], -half_size[2]])
+    ]
+
+    return points
 
 
 
@@ -379,9 +410,10 @@ def detect_planar_patches(pcd):
 
     geometries = []
     for obox in oboxes:
-        mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
-        mesh.paint_uniform_color(obox.color)
-        geometries.append(mesh)
+        # mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
+        # mesh.paint_uniform_color(obox.color)
+        # geometries.append(mesh)
+        geometries.append(obox)
         # geometries.append(obox)
     return geometries
 
@@ -473,11 +505,11 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 
-planes = np.array([ [[0., 0., 0.], [0., 0., 1.], [0., 1., 0.], [0., 1., 1.]],
-                    [[1., 0., 0.], [1., 0., 1.], [1., 1., 0.], [1., 1., 1.]] ]).astype(np.float32)
+planes = np.array([ [ [0., 0., 1.], [0., 1., 0.], [0., 1., 1.], [0., 0., 0.],],
+                    [[1., 0., 0.],  [1., 1., 0.], [1., 0., 1.], [1., 1., 1.]] ]).astype(np.float32)
     
 
-def send_planes():
+def send_planes(event):
     data = planes.tobytes()
     sender_planes.send(data)
     rospy.loginfo("Sent planes")
