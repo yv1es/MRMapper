@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -78,13 +79,27 @@ public class ReceivePlanes : MonoBehaviour
 
     private void RenderPlanarPatch(Vector3[] edgePoints)
     {
+
+        // Find all game objects with the specified name
+        //GameObject[] oldPlanes = GameObject.FindGameObjectsWithTag("Plane");
+
+        //// Delete each game object with the specified name
+        //foreach (GameObject obj in oldPlanes)
+        //{
+        //    Destroy(obj);
+        //}
+
+
         // Sort the points based on their coordinates
         Array.Sort(edgePoints, new Vector3Comparer());
 
         // Create a new game object and add necessary components
-        GameObject rectangleObject = new GameObject("Rectangle");
+        GameObject rectangleObject = new GameObject("Plane");
         rectangleObject.AddComponent<MeshFilter>();
         rectangleObject.AddComponent<MeshRenderer>();
+
+        // ROS to unity coordinate correction 
+        rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
 
         // Set the rectangle material
         MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();

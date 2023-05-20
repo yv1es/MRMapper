@@ -34,7 +34,7 @@ FRAME_HEIGHT = 480
 HOST = s.gethostname() 
 PORT_PLANES = 5003
 
-FREQ_PLANE_EXTRACTION = 2
+FREQ_PLANE_EXTRACTION = 5
 FREQ_SEND_PLANES = 1
 
 net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)
@@ -184,15 +184,18 @@ def process_triplet(img, T, pcd):
     assert (img.shape == (FRAME_HEIGHT, FRAME_WIDTH, 3))
     start_time = time.time()
 
+    print("Transform image for yolo")
     # prepare image for yolo
     x, tmp_img = data.transforms.presets.yolo.transform_test(mx.nd.array(img), short=512)
 
     # compute scale factors of the transform above
     scale = (np.array(img.shape) / np.array(tmp_img.shape))[:2]
 
+    print("Predicting with yolo")
     # predict bounding boxes with yolo
     class_ids, confidences, boxes = net(x)
 
+    print("Converting prediction")
     # convert from MXnet arrays to numpy arrays with reasonable shape
     class_ids = class_ids.asnumpy().reshape(100, 1).astype(np.int32)
     confidences = confidences.asnumpy().reshape(100, 1)
@@ -205,16 +208,20 @@ def process_triplet(img, T, pcd):
     boxes[:, 3] *= scale[1]
 
     # filter for predictions above a treshold 
-    idx = np.where(confidences < 0.5)[0][0]
+    idx = np.where(confidences < 0.3)[0][0]
     class_ids = class_ids[:idx]
     confidences = confidences[:idx]
     boxes = boxes[:idx]
 
+    p = np.empty((0, 4, 3))
 
+    print("Entering loop over boxes")
     for i in range(len(class_ids)):
         class_id = class_ids[i]
         confidence = confidences[i]
         box = boxes[i]
+
+        print("Extract box")
 
         # print info about this bounding box
         print(class_id, confidence, box, classes[int(class_id)])
@@ -230,32 +237,28 @@ def process_triplet(img, T, pcd):
             print("box to close to border")
             # continue
 
+        print("Cropping frustum from point cloud")
         # project its frustum into 3D and make a point cloud with all points inside
         pcd_bb = pcd_from_bb(box, T, pcd)
 
+        print("Checking point cloud for enough inliers")
         # check that the point cloud is not to empty 
         if  len(pcd_bb.points) < 20:
             continue 
-
-        oboxes = detect_planar_patches(pcd_bb)
         
+        print("Detecting planar patches")
+        # oboxes = detect_planar_patches(pcd_bb)
+        _, plane_bb = segment_plane(pcd_bb)
+        oboxes = [plane_bb]
+        print("Detection of patches done")
+
+        print("Saving planar patches")
         for obox in oboxes: 
-            corners = obox_to_corners(obox)
+            corners = obox_to_corners(obox).reshape((1, 4, 3))
+            p = np.vstack([p, corners])
 
-            print(corners)
-            print(type(corners))
-            # points = obox.get_box_points()
-            # print(points)
-            # points = np.stack([np.array(vec) for vec in points], axis=1)
-            # print(points)
-            # # inlier_cloud, hull = segment_plane(pcd_bb)
-            # points = points[:-1,:]
-            # print(points)
-            # clouds.append(pcd_bb)
-        # inliers.append(inlier_cloud)
-        # hulls.append(hull)
 
-        
+    send_planes(p)
 
     # timing of the plane detection pipeline
     end_time = time.time()
@@ -263,17 +266,7 @@ def process_triplet(img, T, pcd):
     rospy.loginfo(f"YOLO Elapsed time: {elapsed_time} seconds")
     
     
-
-
-
-    # draw the bounding boxes
-    # bb_img = draw_boxes(img, class_ids, confidences, boxes, classes)    
-    # cv2.imshow('Image with bounding box', bb_img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
     
-
 
 def draw_boxes(image, class_ids, confidences, boxes, classes):
     # Define some colors
@@ -299,29 +292,9 @@ def draw_boxes(image, class_ids, confidences, boxes, classes):
 
 
 def obox_to_corners(obb):
-    # Assuming you have an Open3D oriented bounding box object named 'obb'
-
-    # Retrieve the center, size, and orientation of the OBB
-    center = obb.get_center()
-    size = obb.get_max_extent()
-    rotation_matrix = obb.get_rotation_matrix()
-
-    # Identify the shortest edge
-    shortest_edge_index = np.argmin(size)
-
-    # Compute the new rectangle's dimensions
-    new_size = np.copy(size)
-    new_size[shortest_edge_index] = 0.0
-
-    # Calculate the four corner points of the rectangle
-    half_size = new_size / 2.0
-    corners = [
-        center + np.dot(rotation_matrix, [-half_size[0], -half_size[1], -half_size[2]]),
-        center + np.dot(rotation_matrix, [half_size[0], -half_size[1], -half_size[2]]),
-        center + np.dot(rotation_matrix, [half_size[0], half_size[1], -half_size[2]]),
-        center + np.dot(rotation_matrix, [-half_size[0], half_size[1], -half_size[2]])
-    ]
-
+    plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 1e-30])
+    points = np.asarray(plane.vertices)
+    points = np.unique(points, axis=0)
     return points
 
 
@@ -344,23 +317,23 @@ def segment_plane(pcd):
     
 
     # remove outliers
-    # cl, ind = inlier_cloud.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
+    cl, ind = inlier_cloud.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
     # cl, ind = inlier_cloud.remove_radius_outlier(nb_points=4, radius=0.1)
-    # inlier_cloud = cl.select_by_index(ind)
+    inlier_cloud = cl.select_by_index(ind)
 
     # clustering
-    labels = np.array(inlier_cloud.cluster_dbscan(eps=0.25, min_points=10))
-    label_counts = np.bincount(labels[labels != -1])
-    most_common_label = np.argmax(label_counts)
+    # labels = np.array(inlier_cloud.cluster_dbscan(eps=0.25, min_points=10))
+    # label_counts = np.bincount(labels[labels != -1])
+    # most_common_label = np.argmax(label_counts)
     
-    indices = np.where(labels == most_common_label)[0]
+    # indices = np.where(labels == most_common_label)[0]
 
-    inlier_cloud = inlier_cloud.select_by_index(indices)
+    # inlier_cloud = inlier_cloud.select_by_index(indices)
 
-    print(labels)
-    print(label_counts)
-    print(most_common_label)
-    print(indices)
+    # print(labels)
+    # print(label_counts)
+    # print(most_common_label)
+    # print(indices)
 
     # max_label = labels.max()
     # print(f"point cloud has {max_label + 1} clusters")
@@ -377,8 +350,8 @@ def segment_plane(pcd):
     # find bounding box     
     obb = o3d.geometry.OrientedBoundingBox.get_minimal_oriented_bounding_box(inlier_cloud)
 
-    plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 0.0001])
-    plane.paint_uniform_color((0, 1, 0))
+    # plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 0.0001])
+    # plane.paint_uniform_color((0, 1, 0))
 
     # plane = plane_mesh_from_obb(obb)
 
@@ -386,19 +359,22 @@ def segment_plane(pcd):
 
     # ls.paint_uniform_color((0, 1, 0))
     
-    return inlier_cloud, plane
+    return inlier_cloud, obb
 
 
 
 def detect_planar_patches(pcd):
+    
+    print("Estimating normals")
     pcd.estimate_normals()
 
+    print("Removing outliers")
     # remove outliers
     cl, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
     # cl, ind = inlier_cloud.remove_radius_outlier(nb_points=4, radius=0.1)
     pcd = cl.select_by_index(ind)
 
-
+    print("Invoke open3d detect planar patches")
     oboxes = pcd.detect_planar_patches(
         normal_variance_threshold_deg=70,
         coplanarity_deg=70,
@@ -408,14 +384,11 @@ def detect_planar_patches(pcd):
         search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
     print("Detected {} patches".format(len(oboxes)))
 
-    geometries = []
-    for obox in oboxes:
-        # mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
-        # mesh.paint_uniform_color(obox.color)
-        # geometries.append(mesh)
-        geometries.append(obox)
+    # geometries = []
+    # for obox in oboxes:
+    #     geometries.append(obox)
         # geometries.append(obox)
-    return geometries
+    return oboxes
 
 
 
@@ -505,11 +478,14 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 
-planes = np.array([ [ [0., 0., 1.], [0., 1., 0.], [0., 1., 1.], [0., 0., 0.],],
+planes_temp = np.array([ [ [0., 0., 1.], [0., 1., 0.], [0., 1., 1.], [0., 0., 0.],],
                     [[1., 0., 0.],  [1., 1., 0.], [1., 0., 1.], [1., 1., 1.]] ]).astype(np.float32)
     
 
-def send_planes(event):
+def send_planes(planes):
+    print("Corners:")
+    print(planes)
+    planes = planes.astype(np.float32)
     data = planes.tobytes()
     sender_planes.send(data)
     rospy.loginfo("Sent planes")
@@ -531,7 +507,7 @@ def main():
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, image_callback)
 
     rospy.Timer(rospy.Duration(FREQ_PLANE_EXTRACTION), capture_callback)
-    rospy.Timer(rospy.Duration(FREQ_SEND_PLANES), send_planes)
+    # rospy.Timer(rospy.Duration(FREQ_SEND_PLANES), send_planes)
 
     rospy.spin()
 
