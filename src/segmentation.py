@@ -179,6 +179,10 @@ def start_capture():
 
 
 
+
+p = np.empty((0, 4, 3))
+
+
 def process_triplet(img, T, pcd):
     print(img.shape)
     assert (img.shape == (FRAME_HEIGHT, FRAME_WIDTH, 3))
@@ -213,7 +217,7 @@ def process_triplet(img, T, pcd):
     confidences = confidences[:idx]
     boxes = boxes[:idx]
 
-    p = np.empty((0, 4, 3))
+    
 
     print("Entering loop over boxes")
     for i in range(len(class_ids)):
@@ -256,6 +260,11 @@ def process_triplet(img, T, pcd):
         for obox in oboxes: 
             corners = obox_to_corners(obox).reshape((1, 4, 3))
             print("Stacking corner points")
+
+            squared_diff = (p - corners) ** 2
+            sum_squared_diff = np.sum(np.sum(squared_diff, axis=1), axis=1)
+            print(sum_squared_diff)
+
             p = np.vstack([p, corners])
 
     print("Sending planes")
