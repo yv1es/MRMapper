@@ -28,7 +28,7 @@ import os
 import time
 
 
-def pcd_from_bb(box, extrinsics, pcd):
+def pcd_from_bbox(box, extrinsics, pcd):
    
     
     # load intrinsic 

@@ -1,30 +1,18 @@
 #!/usr/bin/env python3
-import socket as s 
-import time 
-import json 
 import rospy
-import struct
-import queue
-import threading
 import numpy as np
-
 from sensor_msgs.msg import PointCloud2
 from nav_msgs.msg import Odometry
 
 from unity_sender import UnitySender 
-
-HOST = s.gethostname() 
-PORT_PCL = 5001
-PORT_ODOM = 5002
+from constants import *
 
 
-# http://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/PointCloud2.html
 def callback_cloud_map(cloud_map):   
     data = cloud_map.data
     sender_pcl.send(data)
     
 
-# http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html
 def callback_odom(odom):
     position = odom.pose.pose.position 
     orientation = odom.pose.pose.orientation 

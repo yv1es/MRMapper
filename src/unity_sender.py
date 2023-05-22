@@ -1,11 +1,9 @@
-
 import rospy
-from sensor_msgs.msg import PointCloud2, Image
-from sensor_msgs.point_cloud2 import read_points
-from sensor_msgs import point_cloud2
-from nav_msgs.msg import Odometry
 import socket as s 
 import threading
+import struct
+import threading
+import queue
 
 
 class UnitySender:
@@ -30,7 +28,7 @@ class UnitySender:
         self.sender.daemon = True
         self.sender.start()
         self.log("Sender thread running")
-
+ 
 
     def log(self, message):
         rospy.loginfo("[{}] {}".format(self.tag, message))

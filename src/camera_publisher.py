@@ -14,18 +14,13 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
-# Constants
-FRAME_WIDTH = 640
-FRAME_HEIGHT = 480
-FPS = 60
-HOST = s.gethostname() 
-PORT = 5000 
-
+from constants import *
 FPS_COUNTER = 50
+
 
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
-    socket.bind((HOST, PORT)) 
+    socket.bind((HOST, PORT_CAMERA)) 
     socket.listen()
     return socket
 
@@ -65,7 +60,6 @@ class Msg():
 
 def decode(msg_bytes):
     msg = pickle.loads(msg_bytes)
-
     color = cv2.imdecode(np.frombuffer(msg.color, dtype=np.uint8), cv2.IMREAD_COLOR)
     depth = msg.depth 
     return color, depth
@@ -110,10 +104,6 @@ def main():
         # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
         depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
-        # color_ros = cv2_to_imgmsg(color_image, encoding="rgb8")
-        # depth_ros = cv2_to_imgmsg(depth_image, encoding="mono16")
-        
-
         
 
         # set headers 
@@ -140,33 +130,6 @@ def main():
     conn.close() 
     rospy.loginfo("Streamer disconnected")
 
-
-
-import sys
-import numpy as np
-from sensor_msgs.msg import Image
-
-def imgmsg_to_cv2(img_msg):
-    if img_msg.encoding != "bgr8":
-        rospy.logerr("This Coral detect node has been hardcoded to the 'bgr8' encoding.  Come change the code if you're actually trying to implement a new camera")
-    dtype = np.dtype("uint8") # Hardcode to 8 bits...
-    dtype = dtype.newbyteorder('>' if img_msg.is_bigendian else '<')
-    image_opencv = np.ndarray(shape=(img_msg.height, img_msg.width, 3), # and three channels of data. Since OpenCV works with bgr natively, we don't need to reorder the channels.
-                    dtype=dtype, buffer=img_msg.data)
-    # If the byt order is different between the message and the system.
-    if img_msg.is_bigendian == (sys.byteorder == 'little'):
-        image_opencv = image_opencv.byteswap().newbyteorder()
-    return image_opencv
-
-def cv2_to_imgmsg(cv_image, encoding='bgr8'):
-    img_msg = Image()
-    img_msg.height = cv_image.shape[0]
-    img_msg.width = cv_image.shape[1]
-    img_msg.encoding = encoding
-    img_msg.is_bigendian = 0
-    img_msg.data = cv_image.tostring()
-    img_msg.step = len(img_msg.data) // img_msg.height # That double line is actually integer division, not a comment
-    return img_msg
 
 
 if __name__ == '__main__':
