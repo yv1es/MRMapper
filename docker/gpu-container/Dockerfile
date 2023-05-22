@@ -142,7 +142,9 @@ RUN cd ~/opencv-4.5.2/build \
 
 # Open3D with cuda
 RUN cd ~ \
-    && git clone https://github.com/isl-org/Open3D
+    && git clone https://github.com/isl-org/Open3D \
+    && cd ~/Open3D \
+    && git checkout v0.17.0
 
 RUN cd ~/Open3D \
     && util/install_deps_ubuntu.sh assume-yes

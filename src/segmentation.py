@@ -9,10 +9,9 @@ from cv_bridge import CvBridge
 import socket as s 
 
 import mxnet as mx
-from gluoncv import model_zoo, data, utils
+from gluoncv import model_zoo, data
 import matplotlib.pyplot as plt
 
-# from open3d_ros_helper import open3d_ros_helper as orh
 
 import struct
 import threading
@@ -34,7 +33,7 @@ FRAME_HEIGHT = 480
 HOST = s.gethostname() 
 PORT_PLANES = 5003
 
-FREQ_PLANE_EXTRACTION = 5
+FREQ_PLANE_EXTRACTION = 1
 FREQ_SEND_PLANES = 1
 
 net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)

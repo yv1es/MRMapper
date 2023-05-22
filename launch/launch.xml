@@ -2,8 +2,6 @@
     <!-- Launch rtabmap -->
     <include file="$(find MRMapper)/launch/launch_rtabmap.xml" />
 
-    <!-- Launch yolo -->
-    <!-- <include file="$(find MRMapper)/launch/launch_yolo.xml" />  -->
 
     <!-- Launch camera publisher -->
     <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node>
