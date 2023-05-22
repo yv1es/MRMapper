@@ -108,10 +108,10 @@ def main():
         color_image, depth_image = decode(data)
         
         # transform to ROS Image messages
-        # color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
-        # depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
-        color_ros = cv2_to_imgmsg(color_image, encoding="rgb8")
-        depth_ros = cv2_to_imgmsg(depth_image, encoding="mono16")
+        color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
+        depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
+        # color_ros = cv2_to_imgmsg(color_image, encoding="rgb8")
+        # depth_ros = cv2_to_imgmsg(depth_image, encoding="mono16")
         
 
         

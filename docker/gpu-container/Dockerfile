@@ -131,14 +131,17 @@ RUN cd ~/opencv-4.5.2 \
 RUN cd ~/opencv-4.5.2/build \
     && make -j$(nproc)  
     
-RUN cd ~/opencv-4.5.2/build \
-    && make install
+
 
 
 
 # gluon cv
 RUN pip install mxnet-cu117 gluoncv
-# RUN pip uninstall -y opencv-python opencv-contrib-python 
+RUN pip uninstall -y opencv-python opencv-contrib-python 
+
+
+RUN cd ~/opencv-4.5.2/build \
+    && make install
 
 
 # ROS packages

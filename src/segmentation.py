@@ -5,7 +5,7 @@ from sensor_msgs.msg import PointCloud2, Image
 from sensor_msgs.point_cloud2 import read_points
 from sensor_msgs import point_cloud2
 from nav_msgs.msg import Odometry
-# from cv_bridge import CvBridge
+from cv_bridge import CvBridge
 import socket as s 
 
 import mxnet as mx
@@ -47,7 +47,7 @@ cloud_map_msg = None
 odom_msg = None
 image_msg = None
 currently_capturing = False
-# bridge = CvBridge()
+bridge = CvBridge()
 running = True
 yolo = None
 
@@ -164,8 +164,8 @@ def start_capture():
     # pcd = orh.rospc_to_o3dpc(cloud_map_msg) 
 
     # convert from ROS to opencv image
-    # img = bridge.imgmsg_to_cv2(image_msg, desired_encoding="passthrough")
-    img = imgmsg_to_cv2(image_msg, desired_encoding="passthrough")
+    img = bridge.imgmsg_to_cv2(image_msg, desired_encoding="passthrough")
+    # img = imgmsg_to_cv2(image_msg, desired_encoding="passthrough")
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     # make the camera transform matrix 
