@@ -14,8 +14,13 @@ RUN apt update \
     python3 \
     python3-dev \
     python3-pip \
-    python3-testresources 
+    python3-testresources \
+    python3-tk
 
+
+
+# downgrade numpy (for gluoncv)
+RUN pip uninstall -y numpy && pip install numpy==1.23.1
  
 
 # Install newer version of cmake necessary for Open3d
@@ -60,11 +65,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 
-# install MXnet and gluoncv
-RUN sudo apt -y install python3-tk
-RUN pip uninstall -y numpy &&  pip install numpy==1.23.1
-RUN pip install mxnet-cu117 gluoncv
-RUN pip uninstall -y opencv-python opencv-contrib-python 
+
 
 
 # opencv with cuda
@@ -135,8 +136,13 @@ RUN cd ~/opencv-4.5.2/build \
 
 
 
+# gluon cv
+RUN pip install mxnet-cu117 gluoncv
+# RUN pip uninstall -y opencv-python opencv-contrib-python 
 
 
+# ROS packages
+RUN pip install cvbridge3
 
 
 
@@ -189,8 +195,7 @@ RUN cd ~/rtabmap/build \
 
 
 
-# ROS packages
-RUN pip install cvbridge3
+
 
 RUN cd ~/catkin_ws \
     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
@@ -205,6 +210,3 @@ RUN . /opt/ros/noetic/setup.sh \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
 
-
-# download pretraines yolo model (saves time at first execution)
-# RUN python3 -c "from gluoncv import model_zoo, data; net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)"
