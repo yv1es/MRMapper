@@ -8,8 +8,9 @@ HOST = socket.gethostname()
 # Constants
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
-z
-FPS_COUNTER = 50
+FPS = 60
+
+
 
 # ports
 PORT_CAMERA = 5000 
