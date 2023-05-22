@@ -15,7 +15,7 @@ from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
 from constants import *
-FPS_COUNTER = 50
+fps_counter = 50
 
 
 def setupSocket():
@@ -30,25 +30,14 @@ def setupCameraInfo():
     camera_info = CameraInfo()
     camera_info.width = FRAME_WIDTH
     camera_info.height = FRAME_HEIGHT
-    camera_info.distortion_model = "plumb_bob"
+    camera_info.distortion_model = CAMERA_DISTORTION_MODEL
 
-    camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]
-
-
-    #     [fx  0 cx]
-    # K = [ 0 fy cy]
-    #     [ 0  0  1]
-    camera_info.K = [618.3,   0.0, 316.2,
-                       0.0, 617.9, 242.3,
-                       0.0,   0.0,   1.0]                   
+    camera_info.D = CAMERA_D
+    camera_info.K = CAMERA_K                
     
-    camera_info.R = [1.0, 0.0, 0.0, 
-                     0.0, 1.0, 0.0, 
-                     0.0, 0.0, 1.0]
+    camera_info.R = np.eye(3)
 
-    camera_info.P = [618.3,   0.0, 316.2, 0.0,
-                       0.0, 617.9, 242.3, 0.0,
-                       0.0,   0.0,   1.0, 0.0] 
+    camera_info.P = np.hstack([np.array(CAMERA_K).reshape((3, 4)), np.zeros((3, 1))])
     
     return camera_info
 
@@ -119,9 +108,9 @@ def main():
         info_pub.publish(camera_info)
 
         
-        if indx % FPS_COUNTER == 0: 
+        if indx % fps_counter == 0: 
             elapsed_time = time.time() - start_time
-            fps = FPS_COUNTER / (elapsed_time)
+            fps = fps_counter / (elapsed_time)
             rospy.loginfo(f"FPS: {fps}")
             start_time = time.time()
 

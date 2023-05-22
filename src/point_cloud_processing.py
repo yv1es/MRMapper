@@ -3,42 +3,19 @@
 import rospy
 from sensor_msgs.msg import PointCloud2, Image
 from sensor_msgs.point_cloud2 import read_points
-from sensor_msgs import point_cloud2
-from nav_msgs.msg import Odometry
-from cv_bridge import CvBridge
-import socket as s 
 
 from unity_sender import UnitySender 
 
-import mxnet as mx
-from gluoncv import model_zoo, data
-import matplotlib.pyplot as plt
-
-
 import struct
-import threading
-import queue
 import open3d as o3d
 import numpy as np
-import os
-import datetime
-import cv2
-import tf
-import os
-import time
 
+from constants import *
+
+frustum_depth = 10
 
 def pcd_from_bbox(box, extrinsics, pcd):
-   
-    
-    # load intrinsic 
-    fx, fy = 618.2962646484375, 617.8786010742188
-    cx, cy = 316.1949462890625, 242.33355712890625
-    width, height = 640, 480
-    intrinsics = np.array([[fx, 0, cx], 
-                            [0, fy, cy], 
-                            [0, 0, 1 ]])
-
+    intrinsics = np.array(CAMERA_K).reshape((3, 3))
 
     x1, y1, x2, y2 = box
     
@@ -49,19 +26,19 @@ def pcd_from_bbox(box, extrinsics, pcd):
         [x1, y2]
     ])
 
-    
-    object_frustum = frustum_mesh_from_image_coords(object_corners, 5, intrinsics, extrinsics, width, height)
-    object_ls = o3d.geometry.LineSet.create_from_triangle_mesh(object_frustum)
-    object_ls.paint_uniform_color((0, 0, 1))
+    # compute mesh of frustum goint through the object corners
+    object_frustum = frustum_mesh_from_image_coords(object_corners, 10, intrinsics, extrinsics, FRAME_WIDTH, FRAME_HEIGHT)
 
+    # add mesh for SDF computation 
     mesh = o3d.t.geometry.TriangleMesh.from_legacy(object_frustum)
     scene = o3d.t.geometry.RaycastingScene()
     scene.add_triangles(mesh) 
 
+    # compute the SDF of the frustum to make inside outside check 
     signed_distance = scene.compute_signed_distance(np.array(pcd.points).astype(np.float32))
     sd = signed_distance.numpy()
-    pcd_bb = pcd.select_by_index(np.where(sd <= 0)[0])
-    return pcd_bb
+    pcd_bbox = pcd.select_by_index(np.where(sd <= 0)[0])
+    return pcd_bbox
 
 
 
@@ -102,6 +79,7 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
     vectors = -vectors / norms
 
     return vectors
+
 
 
 def ros_pointcloud_to_o3d(pointcloud_msg):
@@ -149,6 +127,7 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     return pointcloud_o3d
 
 
+
 def float_to_color(f):
     # Convert the float to bytes
     b = struct.pack('f', f)
@@ -158,10 +137,9 @@ def float_to_color(f):
     return r, g, b
 
 
+
 def obox_to_corners(obb):
-    print("Computing corner points")
     plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 1e-30])
-    print("Creted mesh from bounding box")
     points = np.asarray(plane.vertices)
     points = np.unique(points, axis=0)
     return points
