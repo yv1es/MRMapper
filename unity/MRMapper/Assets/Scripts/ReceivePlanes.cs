@@ -20,6 +20,8 @@ public class ReceivePlanes : MonoBehaviour
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private Receiver receiver;
 
+    private List<GameObject> planes = new List<GameObject>(); 
+
     //private List<GameObject> gameObjects; 
 
     public void Start()
@@ -77,17 +79,14 @@ public class ReceivePlanes : MonoBehaviour
         }
     }
 
+
     private void RenderPlanarPatch(Vector3[] edgePoints)
     {
-
-        // Find all game objects with the specified name
-        //GameObject[] oldPlanes = GameObject.FindGameObjectsWithTag("Plane");
-
-        //// Delete each game object with the specified name
-        //foreach (GameObject obj in oldPlanes)
-        //{
-        //    Destroy(obj);
-        //}
+        while (planes.Count > 0) {
+            GameObject g = planes[0];
+            planes.Remove(g);
+            Destroy(g); 
+        }
 
 
         // Sort the points based on their coordinates
@@ -97,6 +96,8 @@ public class ReceivePlanes : MonoBehaviour
         GameObject rectangleObject = new GameObject("Plane");
         rectangleObject.AddComponent<MeshFilter>();
         rectangleObject.AddComponent<MeshRenderer>();
+
+        planes.Add(rectangleObject);
 
         // ROS to unity coordinate correction 
         rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
@@ -115,7 +116,6 @@ public class ReceivePlanes : MonoBehaviour
         {
             0, 2, 3, 1, 0, 3,
             2, 0, 3, 0, 1, 3,
-
         };
 
         // Assign the indices to the mesh

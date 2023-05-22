@@ -254,9 +254,10 @@ def process_triplet(img, T, pcd):
         print("Saving planar patches")
         for obox in oboxes: 
             corners = obox_to_corners(obox).reshape((1, 4, 3))
+            print("Stacking corner points")
             p = np.vstack([p, corners])
 
-
+    print("Sending planes")
     send_planes(p)
 
     # timing of the plane detection pipeline
@@ -291,7 +292,9 @@ def draw_boxes(image, class_ids, confidences, boxes, classes):
 
 
 def obox_to_corners(obb):
+    print("Computing corner points")
     plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 1e-30])
+    print("Creted mesh from bounding box")
     points = np.asarray(plane.vertices)
     points = np.unique(points, axis=0)
     return points
@@ -347,7 +350,8 @@ def segment_plane(pcd):
     # hull_ls = o3d.geometry.LineSet.create_from_triangle_mesh(hull)
     # hull_ls.paint_uniform_color((1, 0, 0))
     # find bounding box     
-    obb = o3d.geometry.OrientedBoundingBox.get_minimal_oriented_bounding_box(inlier_cloud)
+    obb = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
+    # obb = o3d.geometry.OrientedBoundingBox.get_minimal_oriented_bounding_box(inlier_cloud)
 
     # plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 0.0001])
     # plane.paint_uniform_color((0, 1, 0))
@@ -429,12 +433,6 @@ def pcd_from_bb(box, extrinsics, pcd):
     pcd_bb = pcd.select_by_index(np.where(sd <= 0)[0])
     return pcd_bb
 
-    # o3d.visualization.draw_geometries([pcd, object_ls])
-    # o3d.visualization.draw_geometries([pcd_corp, object_ls])
-    
-    # planar_patches = detect_planar_patches(pcd_corp)
-    # o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
-    # o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
 
 
 # origin is relative to the camera hence normally 0's 

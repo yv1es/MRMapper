@@ -204,3 +204,7 @@ RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
+
+
+# download pretraines yolo model (saves time at first execution)
+# RUN python3 -c "from gluoncv import model_zoo, data; net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)"
