@@ -176,9 +176,6 @@ RUN cd ~/Open3D/build \
 
 
 
- 
-
-
 # Install RTABmap 
 RUN sudo apt install -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
 RUN sudo apt remove -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
@@ -194,9 +191,6 @@ RUN cd ~/rtabmap/build \
     && cmake .. \ 
     && make -j20 \
     && sudo make install
-
-
-
 
 
 

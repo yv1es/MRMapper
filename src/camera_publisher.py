@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import rospy
 import socket as s 
 import numpy as np 
@@ -14,18 +13,13 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
-# Constants
-FRAME_WIDTH = 640
-FRAME_HEIGHT = 480
-FPS = 60
-HOST = s.gethostname() 
-PORT = 5000 
+from constants import *
+fps_counter = 50
 
-FPS_COUNTER = 50
 
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
-    socket.bind((HOST, PORT)) 
+    socket.bind((HOST, PORT_CAMERA)) 
     socket.listen()
     return socket
 
@@ -35,26 +29,12 @@ def setupCameraInfo():
     camera_info = CameraInfo()
     camera_info.width = FRAME_WIDTH
     camera_info.height = FRAME_HEIGHT
-    camera_info.distortion_model = "plumb_bob"
+    camera_info.distortion_model = CAMERA_DISTORTION_MODEL
 
-    camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]
-
-
-    #     [fx  0 cx]
-    # K = [ 0 fy cy]
-    #     [ 0  0  1]
-    camera_info.K = [618.3,   0.0, 316.2,
-                       0.0, 617.9, 242.3,
-                       0.0,   0.0,   1.0]                   
-    
-    camera_info.R = [1.0, 0.0, 0.0, 
-                     0.0, 1.0, 0.0, 
-                     0.0, 0.0, 1.0]
-
-    camera_info.P = [618.3,   0.0, 316.2, 0.0,
-                       0.0, 617.9, 242.3, 0.0,
-                       0.0,   0.0,   1.0, 0.0] 
-    
+    camera_info.D = CAMERA_D
+    camera_info.K = CAMERA_K                
+    camera_info.R = list(np.eye(3).reshape(9).astype(np.float32))
+    camera_info.P = list(np.hstack([np.array(CAMERA_K).reshape((3, 3)), np.zeros((3, 1))]).reshape(12).astype(np.float32))
     return camera_info
 
 class Msg():
@@ -65,7 +45,6 @@ class Msg():
 
 def decode(msg_bytes):
     msg = pickle.loads(msg_bytes)
-
     color = cv2.imdecode(np.frombuffer(msg.color, dtype=np.uint8), cv2.IMREAD_COLOR)
     depth = msg.depth 
     return color, depth
@@ -110,10 +89,6 @@ def main():
         # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
         depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
-        # color_ros = cv2_to_imgmsg(color_image, encoding="rgb8")
-        # depth_ros = cv2_to_imgmsg(depth_image, encoding="mono16")
-        
-
         
 
         # set headers 
@@ -129,9 +104,9 @@ def main():
         info_pub.publish(camera_info)
 
         
-        if indx % FPS_COUNTER == 0: 
+        if indx % fps_counter == 0: 
             elapsed_time = time.time() - start_time
-            fps = FPS_COUNTER / (elapsed_time)
+            fps = fps_counter / (elapsed_time)
             rospy.loginfo(f"FPS: {fps}")
             start_time = time.time()
 
@@ -140,33 +115,6 @@ def main():
     conn.close() 
     rospy.loginfo("Streamer disconnected")
 
-
-
-import sys
-import numpy as np
-from sensor_msgs.msg import Image
-
-def imgmsg_to_cv2(img_msg):
-    if img_msg.encoding != "bgr8":
-        rospy.logerr("This Coral detect node has been hardcoded to the 'bgr8' encoding.  Come change the code if you're actually trying to implement a new camera")
-    dtype = np.dtype("uint8") # Hardcode to 8 bits...
-    dtype = dtype.newbyteorder('>' if img_msg.is_bigendian else '<')
-    image_opencv = np.ndarray(shape=(img_msg.height, img_msg.width, 3), # and three channels of data. Since OpenCV works with bgr natively, we don't need to reorder the channels.
-                    dtype=dtype, buffer=img_msg.data)
-    # If the byt order is different between the message and the system.
-    if img_msg.is_bigendian == (sys.byteorder == 'little'):
-        image_opencv = image_opencv.byteswap().newbyteorder()
-    return image_opencv
-
-def cv2_to_imgmsg(cv_image, encoding='bgr8'):
-    img_msg = Image()
-    img_msg.height = cv_image.shape[0]
-    img_msg.width = cv_image.shape[1]
-    img_msg.encoding = encoding
-    img_msg.is_bigendian = 0
-    img_msg.data = cv_image.tostring()
-    img_msg.step = len(img_msg.data) // img_msg.height # That double line is actually integer division, not a comment
-    return img_msg
 
 
 if __name__ == '__main__':

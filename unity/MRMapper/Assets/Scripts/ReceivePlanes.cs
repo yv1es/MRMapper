@@ -34,9 +34,11 @@ public class ReceivePlanes : MonoBehaviour
             runOnMainThread.Enqueue(
             () => {
 
-                List<Vector3[]> planes = new List<Vector3[]>();
 
-                int numPlanes = data.Length / 48; // 4 bytes per value, 3 values per point, 4 points per plane
+                List<Vector3[]> planes_corners = new List<Vector3[]>();
+                List<int> planes_labels = new List<int>();  
+
+                int numPlanes = data.Length / 52; // 4 bytes per value, 3 values per point, 4 points per plane gives 48 bytes, plus 4 bytes for the label
                 for (int i = 0; i < numPlanes; i++)
                 {
                     int offset = i * 48;
@@ -49,11 +51,17 @@ public class ReceivePlanes : MonoBehaviour
                         Vector3 v = new Vector3(x, y, z);
                         p[j] = v; 
                     }
-                    planes.Add(p);  
+
+                    planes_corners.Add(p);  
                 }
 
-             
-                RenderPlanarPatches(planes);
+                for (int i = 0;i < numPlanes;i++) {
+                    int offset = numPlanes * 48 + i * 4; 
+                    int label = BitConverter.ToInt32(data, offset);
+                    planes_labels.Add(label);   
+                }
+
+                RenderPlanarPatches(planes_corners, planes_labels);
             });
         };
 
@@ -77,20 +85,27 @@ public class ReceivePlanes : MonoBehaviour
     }
 
 
-    private void RenderPlanarPatches(List<Vector3[]> p)
-    {
+    private void RenderPlanarPatches(List<Vector3[]> planes_corners, List<int> planes_labels)
+    {   
+        // remove rendered planes
         while (planes.Count > 0) {
             GameObject g = planes[0];
             planes.Remove(g);
             Destroy(g); 
         }
 
-        foreach (var edgePoints in p){
+
+        for (int i = 0; i < planes_corners.Count(); i++)
+        { 
+            Vector3[] corners = planes_corners[i];    
+            int l = planes_labels[i];
+            string label = classes[l]; 
+
             // Sort the points based on their coordinates
-            Array.Sort(edgePoints, new Vector3Comparer());
+            Array.Sort(corners, new Vector3Comparer());
 
             // Create a new game object and add necessary components
-            GameObject rectangleObject = new GameObject("Plane");
+            GameObject rectangleObject = new GameObject(label + "_plane");
             rectangleObject.AddComponent<MeshFilter>();
             rectangleObject.AddComponent<MeshRenderer>();
 
@@ -106,7 +121,7 @@ public class ReceivePlanes : MonoBehaviour
             Mesh rectangleMesh = new Mesh();
 
             // Assign the vertices to the mesh
-            rectangleMesh.vertices = edgePoints;
+            rectangleMesh.vertices = corners;
 
             // Define the indices for the triangles
             int[] indices = new int[]
@@ -137,6 +152,88 @@ public class ReceivePlanes : MonoBehaviour
     {
         receiver.Stop();
     }
+
+    string[] classes = {
+    "person",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "airplane",
+    "bus",
+    "train",
+    "truck",
+    "boat",
+    "traffic light",
+    "fire hydrant",
+    "stop sign",
+    "parking meter",
+    "bench",
+    "bird",
+    "cat",
+    "dog",
+    "horse",
+    "sheep",
+    "cow",
+    "elephant",
+    "bear",
+    "zebra",
+    "giraffe",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "tie",
+    "suitcase",
+    "frisbee",
+    "skis",
+    "snowboard",
+    "sports ball",
+    "kite",
+    "baseball bat",
+    "baseball glove",
+    "skateboard",
+    "surfboard",
+    "tennis racket",
+    "bottle",
+    "wine glass",
+    "cup",
+    "fork",
+    "knife",
+    "spoon",
+    "bowl",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "chair",
+    "couch",
+    "potted plant",
+    "bed",
+    "dining table",
+    "toilet",
+    "tv",
+    "laptop",
+    "mouse",
+    "remote",
+    "keyboard",
+    "cell phone",
+    "microwave",
+    "oven",
+    "toaster",
+    "sink",
+    "refrigerator",
+    "book",
+    "clock",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "hair drier",
+    "toothbrush" };
 }
 
 
