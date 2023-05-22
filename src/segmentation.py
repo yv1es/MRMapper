@@ -54,8 +54,9 @@ yolo = None
 
 def cloud_map_callback(data):
     global cloud_map_msg
-    if capture and cloud_map_msg is None:
-        cloud_map_msg = data
+    # if capture and cloud_map_msg is None:
+        # cloud_map_msg = data
+    cloud_map_msg = data
 
 def odom_callback(data):
     global odom_msg
@@ -151,7 +152,7 @@ def capture_callback(event):
 def start_capture():
     global capture, cloud_map_msg, odom_msg, image_msg, lock
     capture = False
-    cloud_map_msg= None
+    # cloud_map_msg= None
     odom_msg = None
     image_msg = None
     
@@ -184,6 +185,7 @@ p = np.empty((0, 4, 3))
 
 
 def process_triplet(img, T, pcd):
+    global p
     print(img.shape)
     assert (img.shape == (FRAME_HEIGHT, FRAME_WIDTH, 3))
     start_time = time.time()
@@ -212,7 +214,7 @@ def process_triplet(img, T, pcd):
     boxes[:, 3] *= scale[1]
 
     # filter for predictions above a treshold 
-    idx = np.where(confidences < 0.3)[0][0]
+    idx = np.where(confidences < 0.1)[0][0]
     class_ids = class_ids[:idx]
     confidences = confidences[:idx]
     boxes = boxes[:idx]
@@ -225,6 +227,9 @@ def process_triplet(img, T, pcd):
         confidence = confidences[i]
         box = boxes[i]
 
+        if not (int(class_id) in flat):
+            # continue
+            pass
         print("Extract box")
 
         # print info about this bounding box
@@ -235,11 +240,13 @@ def process_triplet(img, T, pcd):
         edge_threshold = 5
         if x1 < edge_threshold or y1 < edge_threshold: 
             print("box to close to border")
-            # continue
+            continue
+            # pass
 
         if img.shape[1] - x2 < edge_threshold or img.shape[0] - y2 < edge_threshold:
             print("box to close to border")
-            # continue
+            continue
+            # pass
 
         print("Cropping frustum from point cloud")
         # project its frustum into 3D and make a point cloud with all points inside
@@ -249,6 +256,7 @@ def process_triplet(img, T, pcd):
         # check that the point cloud is not to empty 
         if  len(pcd_bb.points) < 20:
             continue 
+            # pass
         
         print("Detecting planar patches")
         # oboxes = detect_planar_patches(pcd_bb)
@@ -263,9 +271,25 @@ def process_triplet(img, T, pcd):
 
             squared_diff = (p - corners) ** 2
             sum_squared_diff = np.sum(np.sum(squared_diff, axis=1), axis=1)
+
+            ALPHA = 0.1
             print(sum_squared_diff)
 
+            if sum_squared_diff.shape[0] > 0 and np.min(sum_squared_diff) < 7.5: # duplicate plane check
+                
+                print("Updating plane")
+                idx = np.argmin(sum_squared_diff)
+                old = p[idx, : , :]
+                p[idx, : , :] = old * (1-ALPHA) + corners * ALPHA 
+                
+                
+                continue
+            
+            print("Adding plane")
+            # add new corner
             p = np.vstack([p, corners])
+
+            
 
     print("Sending planes")
     send_planes(p)
@@ -318,7 +342,7 @@ def obox_to_corners(obb):
 def segment_plane(pcd):
 
     
-    plane_model, inliers = pcd.segment_plane(distance_threshold=0.005,
+    plane_model, inliers = pcd.segment_plane(distance_threshold=0.002,
                                             ransac_n=3,
                                             num_iterations=1000)
     [a, b, c, d] = plane_model
@@ -574,6 +598,24 @@ class UnitySender:
         self.socket.close()
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 classes = [ 'person',
     'bicycle',
     'car',
@@ -655,6 +697,7 @@ classes = [ 'person',
     'hair drier',
     'toothbrush']
 
+flat = {59, 60, 66, 67, 62}
 
 
 

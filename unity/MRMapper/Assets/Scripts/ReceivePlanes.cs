@@ -53,10 +53,7 @@ public class ReceivePlanes : MonoBehaviour
                 }
 
              
-                foreach (var plane in planes)
-                {
-                    RenderPlanarPatch(plane); 
-                }
+                RenderPlanarPatches(planes);
             });
         };
 
@@ -80,7 +77,7 @@ public class ReceivePlanes : MonoBehaviour
     }
 
 
-    private void RenderPlanarPatch(Vector3[] edgePoints)
+    private void RenderPlanarPatches(List<Vector3[]> p)
     {
         while (planes.Count > 0) {
             GameObject g = planes[0];
@@ -88,46 +85,47 @@ public class ReceivePlanes : MonoBehaviour
             Destroy(g); 
         }
 
+        foreach (var edgePoints in p){
+            // Sort the points based on their coordinates
+            Array.Sort(edgePoints, new Vector3Comparer());
 
-        // Sort the points based on their coordinates
-        Array.Sort(edgePoints, new Vector3Comparer());
+            // Create a new game object and add necessary components
+            GameObject rectangleObject = new GameObject("Plane");
+            rectangleObject.AddComponent<MeshFilter>();
+            rectangleObject.AddComponent<MeshRenderer>();
 
-        // Create a new game object and add necessary components
-        GameObject rectangleObject = new GameObject("Plane");
-        rectangleObject.AddComponent<MeshFilter>();
-        rectangleObject.AddComponent<MeshRenderer>();
+            planes.Add(rectangleObject);
 
-        planes.Add(rectangleObject);
+            // ROS to unity coordinate correction 
+            rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
 
-        // ROS to unity coordinate correction 
-        rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
+            // Set the rectangle material
+            MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();
 
-        // Set the rectangle material
-        MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();
+            // Create the mesh for the rectangle
+            Mesh rectangleMesh = new Mesh();
 
-        // Create the mesh for the rectangle
-        Mesh rectangleMesh = new Mesh();
+            // Assign the vertices to the mesh
+            rectangleMesh.vertices = edgePoints;
 
-        // Assign the vertices to the mesh
-        rectangleMesh.vertices = edgePoints;
+            // Define the indices for the triangles
+            int[] indices = new int[]
+            {
+                0, 2, 3, 1, 0, 3,
+                2, 0, 3, 0, 1, 3,
+            };
 
-        // Define the indices for the triangles
-        int[] indices = new int[]
-        {
-            0, 2, 3, 1, 0, 3,
-            2, 0, 3, 0, 1, 3,
-        };
+            // Assign the indices to the mesh
+            rectangleMesh.triangles = indices;
 
-        // Assign the indices to the mesh
-        rectangleMesh.triangles = indices;
+            // Calculate the normals and bounds for the mesh
+            rectangleMesh.RecalculateNormals();
+            rectangleMesh.RecalculateBounds();
 
-        // Calculate the normals and bounds for the mesh
-        rectangleMesh.RecalculateNormals();
-        rectangleMesh.RecalculateBounds();
-
-        // Assign the mesh to the mesh filter
-        MeshFilter meshFilter = rectangleObject.GetComponent<MeshFilter>();
-        meshFilter.sharedMesh = rectangleMesh;
+            // Assign the mesh to the mesh filter
+            MeshFilter meshFilter = rectangleObject.GetComponent<MeshFilter>();
+            meshFilter.sharedMesh = rectangleMesh;
+        }
     }
 
 
