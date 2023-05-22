@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import rospy
 import socket as s 
 import numpy as np 
@@ -34,11 +33,8 @@ def setupCameraInfo():
 
     camera_info.D = CAMERA_D
     camera_info.K = CAMERA_K                
-    
-    camera_info.R = np.eye(3)
-
-    camera_info.P = np.hstack([np.array(CAMERA_K).reshape((3, 4)), np.zeros((3, 1))])
-    
+    camera_info.R = list(np.eye(3).reshape(9).astype(np.float32))
+    camera_info.P = list(np.hstack([np.array(CAMERA_K).reshape((3, 3)), np.zeros((3, 1))]).reshape(12).astype(np.float32))
     return camera_info
 
 class Msg():

@@ -31,8 +31,6 @@ image_msg = None
 
 def cloud_map_callback(data):
     global cloud_map_msg
-    # if capture and cloud_map_msg is None:
-        # cloud_map_msg = data
     cloud_map_msg = data
 
 def odom_callback(data):
@@ -58,7 +56,6 @@ def capture_callback(event):
             lock.release()
 
 
-
 def transform_matrix_from_odom(odom_msg):
     position = odom_msg.pose.pose.position
     orientation = odom_msg.pose.pose.orientation    
@@ -67,11 +64,9 @@ def transform_matrix_from_odom(odom_msg):
     return T
 
 
-
 def start_capture():
     global capture, cloud_map_msg, odom_msg, image_msg, lock
     capture = False
-    # cloud_map_msg= None
     odom_msg = None
     image_msg = None
     
@@ -134,11 +129,10 @@ def yolo_predict(img):
     # compute scale factors of the transform above
     scale = (np.array(img.shape) / np.array(tmp_img.shape))[:2]
 
-    print("Predicting with yolo")
+    rospy.loginfo("Predicting with yolo")
     # predict bounding boxes with yolo
     class_ids, confidences, boxes = net(x)
 
-    print("Converting prediction")
     # convert from MXnet arrays to numpy arrays with reasonable shape
     class_ids = class_ids.asnumpy().reshape(100, 1).astype(np.int32)
     confidences = confidences.asnumpy().reshape(100, 1)
@@ -151,7 +145,7 @@ def yolo_predict(img):
     boxes[:, 3] *= scale[1]
 
     # filter for predictions above a treshold 
-    idx = np.where(confidences < 0.1)[0][0]
+    idx = np.where(confidences < YOLO_CONFIDENCE_TRESHOLD)[0][0]
     class_ids = class_ids[:idx]
     confidences = confidences[:idx]
     boxes = boxes[:idx]

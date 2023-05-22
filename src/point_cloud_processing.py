@@ -1,15 +1,12 @@
 # !/usr/bin/env python3
-
 import rospy
 from sensor_msgs.msg import PointCloud2, Image
 from sensor_msgs.point_cloud2 import read_points
-
-from unity_sender import UnitySender 
-
 import struct
 import open3d as o3d
 import numpy as np
 
+from unity_sender import UnitySender 
 from constants import *
 
 frustum_depth = 10
@@ -127,7 +124,6 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     return pointcloud_o3d
 
 
-
 def float_to_color(f):
     # Convert the float to bytes
     b = struct.pack('f', f)
@@ -135,7 +131,6 @@ def float_to_color(f):
     # Extract the red, green, and blue components from the first three bytes
     r, g, b = struct.unpack('BBB', b[:3])
     return r, g, b
-
 
 
 def obox_to_corners(obb):
