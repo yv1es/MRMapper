@@ -19,6 +19,7 @@ from constants import *
 
 net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)
 planes = np.empty((0, 4, 3))
+plane_labels = np.empty((0,1))
 lock = threading.Lock()
 capture = False
 bridge = CvBridge()
@@ -100,7 +101,9 @@ def segment_plane(pcd):
     inlier_cloud = cl.select_by_index(ind)
 
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
-    return inlier_cloud, obox
+    fit_rate = len(inlier_cloud.points) / len (pcd.points)
+    rospy.loginfo("Fit rate {}".format(fit_rate))
+    return inlier_cloud, obox, fit_rate
 
 
 
@@ -120,6 +123,7 @@ def detect_planar_patches(pcd):
         min_num_points=20,
         search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
     return oboxes
+
 
 
 def yolo_predict(img):
@@ -151,8 +155,10 @@ def yolo_predict(img):
     boxes = boxes[:idx]
     return class_ids, confidences, boxes
 
+
+
 def process_capture(img, T, pcd):
-    global planes
+    global planes, plane_labels
     
     start_time = time.time()
     
@@ -190,9 +196,11 @@ def process_capture(img, T, pcd):
         if  len(pcd_bbox.points) < 20:
             continue 
         
-        # oboxes = detect_planar_patches(pcd_bb)
-        _, plane_bb = segment_plane(pcd_bbox)
+        # oboxes = detect_planar_patches(pcd_bbox)
+        _, plane_bb, fit_rate = segment_plane(pcd_bbox)
         oboxes = [plane_bb]
+
+        
         
         rospy.loginfo("Found {} planes".format(len(oboxes)))
 
@@ -211,12 +219,13 @@ def process_capture(img, T, pcd):
                 old = planes[idx, : , :]
                 planes[idx, : , :] = old * (1-PLANE_UPDATE_WEIGHT) + corners * PLANE_UPDATE_WEIGHT 
 
-            else:
-                # add a new plane
+            # else add a new plane if the fit rate is good enough
+            elif fit_rate >= MIN_FIT_RATE:
                 planes = np.vstack([planes, corners])
+                plane_labels = np.vstack([plane_labels, np.array(class_id)])
 
     # send planes to unity 
-    send_planes(planes)
+    send_planes(planes, plane_labels)
 
     # timing of the plane extraction pipeline
     end_time = time.time()
@@ -226,9 +235,10 @@ def process_capture(img, T, pcd):
     
 
 
-def send_planes(planes):
+def send_planes(planes, plane_labels):
     planes = planes.astype(np.float32)
-    data = planes.tobytes()
+    plane_labels = plane_labels.astype(np.int32)
+    data = planes.tobytes() + plane_labels.tobytes()
     plane_sender.send(data)
     plane_sender.log("Sent {} planes to unity".format(planes.shape[0]))
 
