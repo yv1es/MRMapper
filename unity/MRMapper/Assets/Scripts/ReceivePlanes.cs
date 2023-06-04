@@ -105,7 +105,7 @@ public class ReceivePlanes : MonoBehaviour
             Array.Sort(corners, new Vector3Comparer());
 
             // Create a new game object and add necessary components
-            GameObject rectangleObject = new GameObject(label + "_Plane");
+            GameObject rectangleObject = new GameObject(label + "_plane");
             rectangleObject.AddComponent<MeshFilter>();
             rectangleObject.AddComponent<MeshRenderer>();
 

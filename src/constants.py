@@ -21,16 +21,22 @@ PORT_PLANES = 5003
 PORT_ODOM = 5002
 
 # distance in pixels a bounding box needs to have from the frame border to be considered
+MIN_BOUNDING_BOX_MARGIN = 10
+
 FREQ_PLANE_EXTRACTION = 1
-MIN_BOUNDING_BOX_MARGIN = 5
 MIN_PLANE_DISTANCE = 7.5
+
 PLANE_UPDATE_WEIGHT = 0.1
-YOLO_CONFIDENCE_TRESHOLD = 0.1
+MIN_FIT_RATE = 0.2
+
+YOLO_CONFIDENCE_TRESHOLD = 0.3
 
 # class ids which are flat and hence fit a plane
-FLAT = {59, 60, 66, 67, 62}
+FLAT = {59, 60, 66, 67, 62, 63, 73}
 
 # lables for the yolo class ids
+
+
 CLASSES = [ 'person',
     'bicycle',
     'car',

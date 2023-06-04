@@ -90,7 +90,10 @@ def start_capture():
 
 
 def segment_plane(pcd):
-    _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=1000)
+
+    fit_rate_maximum = 0.04
+
+    _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
 
     inlier_cloud = pcd.select_by_index(inliers)
     inlier_cloud.paint_uniform_color([1, 0, 0])
@@ -101,7 +104,10 @@ def segment_plane(pcd):
     inlier_cloud = cl.select_by_index(ind)
 
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
+    
     fit_rate = len(inlier_cloud.points) / len (pcd.points)
+    fit_rate = min(fit_rate_maximum, fit_rate) / fit_rate_maximum 
+
     rospy.loginfo("Fit rate {}".format(fit_rate))
     return inlier_cloud, obox, fit_rate
 
@@ -176,10 +182,6 @@ def process_capture(img, T, pcd):
         confidence = confidences[i]
         bbox = boxes[i]
 
-        # only proceed with flat objects
-        if not (int(class_id) in FLAT):
-            # continue
-            pass
 
         # only proceed when the bounding box has MIN_BOUNDING_BOX_MARGIN pixels distance from the frame borders
         x1, y1, x2, y2 = bbox
@@ -195,14 +197,21 @@ def process_capture(img, T, pcd):
         # only proceed when the cut out point cloud has enough points
         if  len(pcd_bbox.points) < 20:
             continue 
-        
+       
+        # only proceed with flat objects
+        if not (int(class_id) in FLAT):
+            continue
+            # pass
+
+
         # oboxes = detect_planar_patches(pcd_bbox)
         _, plane_bb, fit_rate = segment_plane(pcd_bbox)
         oboxes = [plane_bb]
 
+        if fit_rate < MIN_FIT_RATE: 
+            continue
         
-        
-        rospy.loginfo("Found {} planes".format(len(oboxes)))
+        # rospy.loginfo("Found {} planes".format(len(oboxes)))
 
         for obox in oboxes:
             # compute the 4 corner points from planes obox 
@@ -217,10 +226,11 @@ def process_capture(img, T, pcd):
                 # update the most similar plane
                 idx = np.argmin(sum_squared_diff)
                 old = planes[idx, : , :]
-                planes[idx, : , :] = old * (1-PLANE_UPDATE_WEIGHT) + corners * PLANE_UPDATE_WEIGHT 
+                k = PLANE_UPDATE_WEIGHT * fit_rate ** 2
+                print("UPDATE WEIGHT: ", k)
+                planes[idx, : , :] = old * (1-k) + corners * k 
 
-            # else add a new plane if the fit rate is good enough
-            elif fit_rate >= MIN_FIT_RATE:
+            else:
                 planes = np.vstack([planes, corners])
                 plane_labels = np.vstack([plane_labels, np.array(class_id)])
 
