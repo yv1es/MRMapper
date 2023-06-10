@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import socket
 
+# Camera parameters 
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 
@@ -12,31 +13,48 @@ CAMERA_D =  [0.0, 0.0, 0.0, 0.0, 0.0]
 CAMERA_K =  [618.3,    0.0,  316.2,
                0.0,  617.9,  242.3,
                0.0,    0.0,   1.0]   
- 
+
+
 # Ports
 HOST = socket.gethostname()
 PORT_CAMERA = 5000 
 PORT_PCL = 5001
-PORT_PLANES = 5003
 PORT_ODOM = 5002
-
-# distance in pixels a bounding box needs to have from the frame border to be considered
-MIN_BOUNDING_BOX_MARGIN = 10
-
-FREQ_PLANE_EXTRACTION = 1
-MIN_PLANE_DISTANCE = 7.5
-
-PLANE_UPDATE_WEIGHT = 0.1
-MIN_FIT_RATE = 0.2
-
-YOLO_CONFIDENCE_TRESHOLD = 0.3
-
-# class ids which are flat and hence fit a plane
-FLAT = {59, 60, 66, 67, 62, 63, 73}
-
-# lables for the yolo class ids
+PORT_PLANES = 5003
+PORT_OBJECTS = 5004
 
 
+FREQ_SEMANTIC_INFERENCE = 1  # how frequently the semantic inference is launched (in seconds)
+FRUSTUM_DEPTH = 8 # how deep the frustum from the camera reaches into the scene (in meters)
+
+# filtering 
+YOLO_CONFIDENCE_TRESHOLD = 0.3  # minimum confidence required from yolo detections 
+MIN_BOUNDING_BOX_MARGIN = 10  # minimum distance that a bounding box needs to have from the borders of the camera frame
+DBSCAN_EPS = 0.15
+DBSCAN_MIN_POINTS = 4 
+
+# planes
+MIN_PLANE_DISTANCE = 30   # when a plane has a distance > MIN_PLANE_DIST to all other planes then it is added as a new plane
+PLANE_UPDATE_WEIGHT = 0.1      # update weigth a new detected plane(distance smaller than MIN_PLANE_DIST) has on the existing closest plane
+MIN_FIT_RATE = 0.08  # minimum fit rate a plane needs to have 
+FIT_RATE_NORMALIZATION = 0.05  # fit rates are mapped from [0, FIT_RATE_NORMALIZATION] to [0, 1] linearly, fit rates > FIT_RATE_NORMALIZATION are capped to 1 
+AREA_NORMALIZATION = 2  # areas are mapped from [0, AREA_NORMALIZATION] to [0, 1] linearly, areas > AREA_NORMALIZATION are capped to 1 
+
+# icp fitting
+MIN_ICP_OBJ_DIST = 1   # when a icp_object has a distance > MIN_ICP_OBJ_DIST to all other icp objects then it is added as a new icp object
+MAX_RMSE = 0.055   # maximum RMSE that is tolerated 
+ICP_OBJECT_UPDATE_WEIGHT = 0.2  # update weigth a new detection of the same object (distance smaller than MIN_ICP_OBJ_DIST) has on the existing object
+
+# class ids which are flat and hence MRMapper shoudl fit a plane
+FLAT_OBJECTS = {59, 60, 66, 73}
+
+# class ids for which MRMapper should fit a icp_object (currently only the office chair is supported)
+ICP_OBJECTS = {56}
+
+
+CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
+
+# map from class_id (implicit) to class label
 CLASSES = [ 'person',
     'bicycle',
     'car',

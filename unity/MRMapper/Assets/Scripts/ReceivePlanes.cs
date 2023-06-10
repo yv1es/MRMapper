@@ -9,97 +9,75 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using UnityEditor;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.XR;
 
 
 
 
-public class ReceivePlanes : MonoBehaviour
+public class ReceivePlanes : RosReceiver
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private Receiver receiver;
 
-    private List<GameObject> planes = new List<GameObject>(); 
+    // this list saves all planes that have been drawn, such that they can be removed later 
+    private List<GameObject> rendered_planes = new List<GameObject>();
 
-    //private List<GameObject> gameObjects; 
+
+    int port = 5003;
+    string log_tag = "Plane Receiver"; 
+
 
     public void Start()
     {
-        // ROS to unity coordinate correction 
-        this.transform.rotation = Quaternion.Euler(90, 90, 180);
-
-        // callback for receiver
-        Action<byte[]> callback = (data) => {
-            runOnMainThread.Enqueue(
-            () => {
-
-
-                List<Vector3[]> planes_corners = new List<Vector3[]>();
-                List<int> planes_labels = new List<int>();  
-
-                int numPlanes = data.Length / 52; // 4 bytes per value, 3 values per point, 4 points per plane gives 48 bytes, plus 4 bytes for the label
-                for (int i = 0; i < numPlanes; i++)
-                {
-                    int offset = i * 48;
-                    Vector3[] p = new Vector3[4];
-                    for (int j = 0; j < 4; j++) {
-                        int point_offset = offset + j * 12;
-                        float x = BitConverter.ToSingle(data, point_offset);
-                        float y = BitConverter.ToSingle(data, point_offset + 4);
-                        float z = -BitConverter.ToSingle(data, point_offset + 8); // right to left handed coordinate system change
-                        Vector3 v = new Vector3(x, y, z);
-                        p[j] = v; 
-                    }
-
-                    planes_corners.Add(p);  
-                }
-
-                for (int i = 0;i < numPlanes;i++) {
-                    int offset = numPlanes * 48 + i * 4; 
-                    int label = BitConverter.ToInt32(data, offset);
-                    planes_labels.Add(label);   
-                }
-
-                RenderPlanarPatches(planes_corners, planes_labels);
-            });
-        };
-
-        // start receiver 
-        receiver = new Receiver("127.0.0.1", 5003, "Plane Receiver");
-        receiver.Start(callback);
+        Setup(port, log_tag, ProcessReceivedBytes);
     }
 
-
-    // Update is called once per frame
-    public void Update()
+    private void ProcessReceivedBytes(byte[] data)
     {
-        if (!runOnMainThread.IsEmpty)
+        List<Vector3[]> planes_corners = new List<Vector3[]>();
+        List<int> planes_labels = new List<int>();
+
+        int numPlanes = data.Length / 52; // 4 bytes per value, 3 values per point, 4 points per plane gives 48 bytes, plus 4 bytes for the label
+        for (int i = 0; i < numPlanes; i++)
         {
-            Action action;
-            while (runOnMainThread.TryDequeue(out action))
+            int offset = i * 52;
+            Vector3[] p = new Vector3[4];
+            for (int j = 0; j < 4; j++)
             {
-                action.Invoke();
+                int point_offset = offset + j * 12;
+                float x = BitConverter.ToSingle(data, point_offset);
+                float y = BitConverter.ToSingle(data, point_offset + 4);
+                float z = BitConverter.ToSingle(data, point_offset + 8); 
+                Vector3 v = RtabVecToUnity(new float[] { x, y, z });
+                p[j] = v;
             }
+            planes_corners.Add(p);
+
+            int class_id = (int)BitConverter.ToSingle(data, offset + 48);
+            planes_labels.Add(class_id);
         }
+        RenderPlanarPatches(planes_corners, planes_labels);
     }
 
 
     private void RenderPlanarPatches(List<Vector3[]> planes_corners, List<int> planes_labels)
-    {   
-        // remove rendered planes
-        while (planes.Count > 0) {
-            GameObject g = planes[0];
-            planes.Remove(g);
-            Destroy(g); 
+    {
+        // remove previously rendered planes
+        while (rendered_planes.Count > 0)
+        {
+            GameObject g = rendered_planes[0];
+            rendered_planes.Remove(g);
+            Destroy(g);
         }
 
 
         for (int i = 0; i < planes_corners.Count(); i++)
-        { 
-            Vector3[] corners = planes_corners[i];    
+        {
+            Vector3[] corners = planes_corners[i];
             int l = planes_labels[i];
-            string label = classes[l]; 
+            string label = classes[l];
 
             // Sort the points based on their coordinates
             Array.Sort(corners, new Vector3Comparer());
@@ -109,10 +87,10 @@ public class ReceivePlanes : MonoBehaviour
             rectangleObject.AddComponent<MeshFilter>();
             rectangleObject.AddComponent<MeshRenderer>();
 
-            planes.Add(rectangleObject);
+            rendered_planes.Add(rectangleObject);
 
             // ROS to unity coordinate correction 
-            rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
+            // rectangleObject.transform.rotation = Quaternion.Euler(90, 90, 180);
 
             // Set the rectangle material
             MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();
@@ -143,15 +121,6 @@ public class ReceivePlanes : MonoBehaviour
         }
     }
 
-
-
-
-
-
-    private void OnDestroy()
-    {
-        receiver.Stop();
-    }
 
     string[] classes = {
     "person",
@@ -235,7 +204,6 @@ public class ReceivePlanes : MonoBehaviour
     "hair drier",
     "toothbrush" };
 }
-
 
 
 
