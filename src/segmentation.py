@@ -198,22 +198,21 @@ def process_capture(img, T, pcd):
         if  len(pcd_bbox.points) < 20:
             continue 
        
-        # only proceed with flat objects
-        if not (int(class_id) in FLAT):
-            continue
-            # pass
-
-
-        # oboxes = detect_planar_patches(pcd_bbox)
-        _, plane_bb, fit_rate = segment_plane(pcd_bbox)
-        oboxes = [plane_bb]
-
-        if fit_rate < MIN_FIT_RATE: 
-            continue
         
-        # rospy.loginfo("Found {} planes".format(len(oboxes)))
+        if int(class_id) == BOTTLE: 
+            print("BOTTLE, BOTTLE, BOTTLE, BOTTLE")
+            
 
-        for obox in oboxes:
+
+        # fit a plane for flat objects
+        if int(class_id) in FLAT:
+            # oboxes = detect_planar_patches(pcd_bbox)
+            _, obox, fit_rate = segment_plane(pcd_bbox)
+
+            if fit_rate < MIN_FIT_RATE: 
+                continue
+            
+
             # compute the 4 corner points from planes obox 
             corners = obox_to_corners(obox).reshape((1, 4, 3))
 
@@ -221,28 +220,42 @@ def process_capture(img, T, pcd):
             squared_diff = (planes - corners) ** 2
             sum_squared_diff = np.sum(np.sum(squared_diff, axis=1), axis=1)
 
-            
-            if sum_squared_diff.shape[0] > 0 and np.min(sum_squared_diff) < MIN_PLANE_DISTANCE: # duplicate plane check
+            # update plane if it is simmilar and has the same class id 
+            if sum_squared_diff.shape[0] > 0 and np.min(sum_squared_diff) < MIN_PLANE_DISTANCE: 
                 # update the most similar plane
                 idx = np.argmin(sum_squared_diff)
-                old = planes[idx, : , :]
-                k = PLANE_UPDATE_WEIGHT * fit_rate ** 2
-                print("UPDATE WEIGHT: ", k)
-                planes[idx, : , :] = old * (1-k) + corners * k 
 
+                # check for same object class
+                if plane_labels[idx] == class_id:
+                        old = planes[idx, : , :]
+                        k = PLANE_UPDATE_WEIGHT * fit_rate ** 2
+                        print("UPDATE WEIGHT: ", k)
+                        planes[idx, : , :] = old * (1-k) + corners * k
+
+                else: # similar plane but different object was detected
+                    planes = np.vstack([planes, corners])
+                    plane_labels = np.vstack([plane_labels, np.array(class_id)])
+
+            # else add new plane
             else:
                 planes = np.vstack([planes, corners])
                 plane_labels = np.vstack([plane_labels, np.array(class_id)])
 
-    # send planes to unity 
-    send_planes(planes, plane_labels)
+
+        # send planes to unity 
+        send_planes(np.copy(planes), np.copy(plane_labels)) # copy numpy array to avoid memory corruption because of synchronization
 
     # timing of the plane extraction pipeline
     end_time = time.time()
     elapsed_time = end_time - start_time
     rospy.loginfo(f"Plane extraction elapsed time: {elapsed_time} seconds")
     
-    
+
+
+
+
+def fit_bootle():
+
 
 
 def send_planes(planes, plane_labels):

@@ -50,6 +50,12 @@
 
           <param name="RGBD/OptimizeFromGraphEnd" type="bool" value="false"/>
     
+          <param name="cloud_voxel_size" value="0.03"/>
+          <param name="cloud_max_depth" value="0"/>
+          <param name="map_filter_rad" value="0"/>
+          <param name="time_threshold" value="0"/>
+          <param name="cloud_noise_filtering_radius" value="0.05"/>
+          <param name="cloud_noise_filtering_min_neighbors" value="2"/>
 
           <param name="Kp/DetectorStrategy" type="int" value="8" />
           <param name="Vis/FeatureType" type="int" value="8" />

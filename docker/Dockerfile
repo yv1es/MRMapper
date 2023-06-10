@@ -199,7 +199,9 @@ RUN cd ~/catkin_ws \
     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
 
 RUN cd ~/catkin_ws/src \
-    && git clone https://github.com/yv1es/MRMapper.git
+    && git clone https://github.com/yv1es/MRMapper.git \
+    && cd ~/catkin_ws/src/MRMapper \
+    && git checkout main
 
 # install ROS packages
 RUN . /opt/ros/noetic/setup.sh \

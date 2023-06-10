@@ -32,7 +32,8 @@ MIN_FIT_RATE = 0.2
 YOLO_CONFIDENCE_TRESHOLD = 0.3
 
 # class ids which are flat and hence fit a plane
-FLAT = {59, 60, 66, 67, 62, 63, 73}
+FLAT = {57, 59, 60, 66, 67, 62, 63, 73}
+BOTTLE = 39
 
 # lables for the yolo class ids
 
