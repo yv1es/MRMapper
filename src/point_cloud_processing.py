@@ -5,6 +5,7 @@ from sensor_msgs.point_cloud2 import read_points
 import struct
 import open3d as o3d
 import numpy as np
+import copy 
 
 from unity_sender import UnitySender 
 from constants import *
@@ -138,3 +139,71 @@ def obox_to_corners(obb):
     points = np.asarray(plane.vertices)
     points = np.unique(points, axis=0)
     return points
+
+
+def load_chair_mesh():
+    chair_size = 1.30 # size of the chair in meters along its longes extend 
+    chair_mesh = o3d.io.read_triangle_mesh("office_chair.stl")
+    chair_points = chair_mesh.vertices
+    max_extent = np.amax(chair_points, axis=0)
+    min_extent = np.amin(chair_points, axis=0)
+    size = max_extent - min_extent
+    scaling =  chair_size / np.max(size)
+    chair_mesh.paint_uniform_color([0, 0, 1]) 
+    chair_mesh.compute_vertex_normals()
+    chair_mesh.scale(scaling, center=chair_mesh.get_center())
+
+
+def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
+
+    frustum_mean = np.mean(np.asarray(frustum_pcd.points), axis=0)
+    initial_pos = (frustum_mean - camera_pos) * 0.5  
+    translation = np.eye(4)
+    translation[0:3, 3] = initial_pos - obj_pcd.get_center()
+   
+    # 45 degree homogeneus rotation matrix
+    y_45deg = np.array([[0.707, -0.707, 0, 0],
+                        [0.707, 0.707, 0, 0],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]])
+    
+    avg_rmse = 0
+    best_rmse = 10e10
+    best_t = None
+
+    # skip through possible initial rotations with 45 deg stride
+    for k in range(8):
+        t = translation @ np.linalg.matrix_power(y_45deg, k) 
+        t, rmse = iterative_icp(obj_pcd, frustum_pcd, t)
+        avg_rmse += rmse/8
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_t = t
+    
+    return best_t, best_rmse
+
+
+def frustum_hidden_point_removal(pcd, camera_pos):
+    frustum_mean = np.mean(np.asarray(pcd.points), axis=0)
+    radius = np.linalg.norm(frustum_mean - camera_pos) * 300
+    _, pt_map = pcd.hidden_point_removal(camera_pos, radius)
+    pcd = pcd.select_by_index(pt_map)
+    return pcd
+
+
+
+def iterative_icp(obj_pcd, scene_pcd, inital_T):
+    obj_pcd = copy.deepcopy(obj_pcd)
+    T = inital_T.copy()
+    obj_pcd.transform(T)
+
+    for mcd in [4, 2, 1, 0.5, 0.1]:
+        icp_result = o3d.pipelines.registration.registration_icp(
+            obj_pcd, scene_pcd, max_correspondence_distance=mcd,
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
+        obj_pcd.transform(icp_result.transformation)
+        T = icp_result.transformation @ T
+        rmse = icp_result.inlier_rmse
+    return T, rmse
+
+

@@ -8,7 +8,7 @@ import cv2
 def main():
     # Get the folder path from the command line argument
     if len(sys.argv) < 2:
-        print("Usage: python visualize_point_cloud.py folder_path")
+        print("Usage: python icp.py folder_path")
         sys.exit(1)
     folder_path = sys.argv[1]
     pcd_path = os.path.join(folder_path, "point_cloud.ply")
@@ -53,30 +53,28 @@ def main():
         [width-1, 0]])    
 
 
-    # bild
+    # bounding box
     object_corners = np.array([
-        [104,15],
-        [280,15],
-        [280,200],
-        [110,200],
+        [173, 85],
+        [395, 84],
+        [396, 380],
+        [173, 380],
     ])
 
-    # couch 
-    # object_corners = np.array([
-    #     [210, 470],
-    #     [537, 109],
-    #     [707, 260],
-    #     [376, 635],
-    # ])
 
-    # bett
-    # object_corners = np.array([
-    #     [6,210],
-    #     [590,208],
-    #     [585,470],
-    #     [11, 470],
-    # ])
-
+    # load and scale chair mesh 
+    chair_mesh = o3d.io.read_triangle_mesh("chair.stl")
+    chair_points = chair_mesh.vertices
+    max_extent = np.amax(chair_points, axis=0)
+    min_extent = np.amin(chair_points, axis=0)
+    size = max_extent - min_extent
+    scaling =  1 / np.max(size)
+    chair_mesh.paint_uniform_color([0, 0, 1]) 
+    chair_mesh.compute_vertex_normals()
+    chair_mesh.scale(scaling, center=chair_mesh.get_center())
+    
+    
+    
     
     object_frustum = frustum_mesh_from_image_coords(object_corners, 5, intrinsics, extrinsics, width, height)
     object_ls = o3d.geometry.LineSet.create_from_triangle_mesh(object_frustum)
@@ -88,43 +86,42 @@ def main():
 
     signed_distance = scene.compute_signed_distance(np.array(pcd.points).astype(np.float32))
     sd = signed_distance.numpy()
-    pcd_corp = pcd.select_by_index(np.where(sd <= 0)[0])
+    point_cloud = pcd.select_by_index(np.where(sd <= 0)[0])
 
 
     o3d.visualization.draw_geometries([pcd, object_ls])
-    o3d.visualization.draw_geometries([pcd_corp, object_ls])
+    o3d.visualization.draw_geometries([point_cloud, object_ls])
+
+
+    pcd_mean = np.mean(np.asarray(point_cloud.points), axis=0)
     
-    planar_patches = detect_planar_patches(pcd_corp)
-    o3d.visualization.draw_geometries([pcd_corp, object_ls] + planar_patches)
-    o3d.visualization.draw_geometries([pcd, object_ls] + planar_patches)
+    move_mesh_center_to(chair_mesh, pcd_mean)    
+    chair_cloud = chair_mesh.sample_points_uniformly(number_of_points=5000)
 
+    
+    # Perform ICP registration
+    icp_result = o3d.pipelines.registration.registration_icp(
+        chair_cloud, point_cloud, max_correspondence_distance=0.5,
+        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
 
+    # Apply the transformation to the point cloud
+    transformed_chair_mesh = chair_mesh.transform(icp_result.transformation)
 
-def detect_planar_patches(pcd):
+    print(icp_result)
+    print(icp_result.transformation)
 
-    pcd.estimate_normals()
+    # Visualize the aligned point cloud and mesh
+    o3d.visualization.draw_geometries([transformed_chair_mesh, pcd])
+    
+  
 
-    oboxes = pcd.detect_planar_patches(
-        normal_variance_threshold_deg=70,
-        coplanarity_deg=70,
-        outlier_ratio=0.75,
-        min_plane_edge_length=1,
-        min_num_points=0,
-        search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
-
-    print("Detected {} patches".format(len(oboxes)))
-
-    geometries = []
-    for obox in oboxes:
-        mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obox, scale=[1, 1, 0.0001])
-        mesh.paint_uniform_color(obox.color)
-        geometries.append(mesh)
-        # geometries.append(obox)
-    # geometries.append(pcd)
-    return geometries
-    # o3d.visualization.draw_geometries(geometries)
-
-
+def move_mesh_center_to(mesh, pos):
+    vertices = np.asarray(mesh.vertices)
+    centroid = np.mean(vertices, axis=0)
+    translation = pos - centroid
+    translated_vertices = vertices + translation
+    mesh.vertices = o3d.utility.Vector3dVector(translated_vertices)
+    return mesh 
 
 # origin is relative to the camera hence normally 0's 
 # the corners are also relative to the camera 

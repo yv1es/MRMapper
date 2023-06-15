@@ -13,7 +13,7 @@ import tf
 import time
 
 from unity_sender import UnitySender 
-from point_cloud_processing import ros_pointcloud_to_o3d, pcd_from_bbox, obox_to_corners
+from point_cloud_processing import *
 from constants import *
 
 
@@ -23,6 +23,7 @@ plane_labels = np.empty((0,1))
 lock = threading.Lock()
 capture = False
 bridge = CvBridge()
+chair_mesh = load_chair_mesh()
 
 # store simultaniously captured messages
 cloud_map_msg = None
@@ -91,8 +92,6 @@ def start_capture():
 
 def segment_plane(pcd):
 
-    fit_rate_maximum = 0.04
-
     _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
 
     inlier_cloud = pcd.select_by_index(inliers)
@@ -103,32 +102,38 @@ def segment_plane(pcd):
     # cl, ind = inlier_cloud.remove_radius_outlier(nb_points=4, radius=0.1)
     inlier_cloud = cl.select_by_index(ind)
 
+
+    # clustering
+    # labels = np.array(inlier_cloud.cluster_dbscan(eps=0.25, min_points=10))
+    # label_counts = np.bincount(labels[labels != -1])
+    # most_common_label = np.argmax(label_counts)
+    
+    # indices = np.where(labels == most_common_label)[0]
+
+    # inlier_cloud = inlier_cloud.select_by_index(indices)
+
+    # print(labels)
+    # print(label_counts)
+    # print(most_common_label)
+    # print(indices)
+
+    # max_label = labels.max()
+    # print(f"point cloud has {max_label + 1} clusters")
+    # colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
+    # colors[labels < 0] = 0
+    # inlier_cloud.colors = o3d.utility.Vector3dVector(colors[:, :3])
+    # o3d.visualization.draw_geometries([inlier_cloud])
+
+
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
     
     fit_rate = len(inlier_cloud.points) / len (pcd.points)
-    fit_rate = min(fit_rate_maximum, fit_rate) / fit_rate_maximum 
+    fit_rate = min(FIT_RATE_NORMALIZATION, fit_rate) / FIT_RATE_NORMALIZATION 
 
     rospy.loginfo("Fit rate {}".format(fit_rate))
     return inlier_cloud, obox, fit_rate
 
 
-
-def detect_planar_patches(pcd):    
-    pcd.estimate_normals()
-
-    # remove outliers
-    cl, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
-    # cl, ind = inlier_cloud.remove_radius_outlier(nb_points=4, radius=0.1)
-    pcd = cl.select_by_index(ind)
-
-    oboxes = pcd.detect_planar_patches(
-        normal_variance_threshold_deg=70,
-        coplanarity_deg=70,
-        outlier_ratio=0.5,
-        min_plane_edge_length=0.5,
-        min_num_points=20,
-        search_param=o3d.geometry.KDTreeSearchParamKNN(knn=10))
-    return oboxes
 
 
 
@@ -163,7 +168,7 @@ def yolo_predict(img):
 
 
 
-def process_capture(img, T, pcd):
+def process_capture(img, camera_T, pcd):
     global planes, plane_labels
     
     start_time = time.time()
@@ -177,6 +182,7 @@ def process_capture(img, T, pcd):
         bbox = boxes[i]
         print("\t {}, {}, {}, {}".format(class_id, confidence, bbox, CLASSES[int(class_id)]))
 
+    # loop over detected objects
     for i in range(len(class_ids)):
         class_id = class_ids[i]
         confidence = confidences[i]
@@ -192,20 +198,33 @@ def process_capture(img, T, pcd):
             continue
 
         # project its frustum into 3D and make a point cloud with all points inside
-        pcd_bbox = pcd_from_bbox(bbox, T, pcd)
+        pcd_bbox = pcd_from_bbox(bbox, camera_T, pcd)
+
+        # remove points that should be hidden from the camera
+        pcd_bbox = frustum_hidden_point_removal(pcd_bbox, camera_pos)
 
         # only proceed when the cut out point cloud has enough points
         if  len(pcd_bbox.points) < 20:
             continue 
        
         
-        if int(class_id) == BOTTLE: 
-            print("BOTTLE, BOTTLE, BOTTLE, BOTTLE")
+        if int(class_id) == CHAIR: 
+            print("CHAIR")
+            camera_pos = camera_T[0:3, 3]
+
+            chair_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
+            chair_T, rmse = icp_fit_object(chair_cloud, pcd_bbox, camera_pos)
+            print(chair_T)
+            print(rmse)
+
+            cm = chair_mesh.copy()
+            cm.transform(chair_T)
+            o3d.visualization.draw_geometries([cm, pcd])
             
 
 
         # fit a plane for flat objects
-        if int(class_id) in FLAT:
+        elif int(class_id) in FLAT:
             # oboxes = detect_planar_patches(pcd_bbox)
             _, obox, fit_rate = segment_plane(pcd_bbox)
 
@@ -216,25 +235,26 @@ def process_capture(img, T, pcd):
             # compute the 4 corner points from planes obox 
             corners = obox_to_corners(obox).reshape((1, 4, 3))
 
-            # computing if a similar plane was already registered
-            squared_diff = (planes - corners) ** 2
-            sum_squared_diff = np.sum(np.sum(squared_diff, axis=1), axis=1)
+            area = area_of_plane(corners)
+            area_factor = min(area / AREA_NORMALIZATION, 1)
 
-            # update plane if it is simmilar and has the same class id 
-            if sum_squared_diff.shape[0] > 0 and np.min(sum_squared_diff) < MIN_PLANE_DISTANCE: 
-                # update the most similar plane
-                idx = np.argmin(sum_squared_diff)
+            # computing the distance to the most similar plane
+            min_plane_dist = 10e10
+            if planes.shape[0] > 0: 
+                squared_diff = (planes - corners) ** 2
+                sum_squared_diff = np.sum(np.sum(squared_diff, axis=1), axis=1)
+                most_similar_idx = np.argmin(sum_squared_diff) 
 
-                # check for same object class
-                if plane_labels[idx] == class_id:
-                        old = planes[idx, : , :]
-                        k = PLANE_UPDATE_WEIGHT * fit_rate ** 2
-                        print("UPDATE WEIGHT: ", k)
-                        planes[idx, : , :] = old * (1-k) + corners * k
+                # having the same object class is required for similarity
+                if plane_labels[most_similar_idx] == class_id: 
+                    min_plane_dist = np.min(sum_squared_diff) / area_factor
 
-                else: # similar plane but different object was detected
-                    planes = np.vstack([planes, corners])
-                    plane_labels = np.vstack([plane_labels, np.array(class_id)])
+            # update plane if it is similar and has the same class id 
+            if min_plane_dist < MIN_PLANE_DISTANCE: 
+                old = planes[most_similar_idx, : , :]
+                k = PLANE_UPDATE_WEIGHT * fit_rate ** 2 * area_factor
+                print("UPDATE WEIGHT: ", k)
+                planes[most_similar_idx, : , :] = old * (1-k) + corners * k
 
             # else add new plane
             else:
@@ -252,11 +272,11 @@ def process_capture(img, T, pcd):
     
 
 
-
-
-def fit_bootle():
-
-
+def area_of_plane(corners):
+    A = corners[0, 1,:] - corners[0, 0,:]
+    B = corners[0, 2,:] - corners[0, 0,:]
+    area = np.linalg.norm(np.cross(A, B))
+    return area
 
 def send_planes(planes, plane_labels):
     planes = planes.astype(np.float32)
