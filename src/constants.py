@@ -17,8 +17,9 @@ CAMERA_K =  [618.3,    0.0,  316.2,
 HOST = socket.gethostname()
 PORT_CAMERA = 5000 
 PORT_PCL = 5001
-PORT_PLANES = 5003
 PORT_ODOM = 5002
+PORT_PLANES = 5003
+PORT_OBJECTS = 5004
 
 # distance in pixels a bounding box needs to have from the frame border to be considered
 MIN_BOUNDING_BOX_MARGIN = 10
@@ -38,6 +39,8 @@ YOLO_CONFIDENCE_TRESHOLD = 0.3
 # class ids which are flat and hence fit a plane
 FLAT = {59, 60, 66, 67, 62, 63, 73}
 CHAIR = 56
+
+CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/office_chair.stl"
 
 # lables for the yolo class ids
 

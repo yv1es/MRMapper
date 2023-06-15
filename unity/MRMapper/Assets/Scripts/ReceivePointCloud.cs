@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.XR;
 
 
-public class PointCloudRenderer : MonoBehaviour
+public class ReceivePointCloud : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
     private Receiver receiver;

@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 import tf
 import time
+import copy
 
 from unity_sender import UnitySender 
 from point_cloud_processing import *
@@ -18,10 +19,16 @@ from constants import *
 
 
 net = model_zoo.get_model('yolo3_darknet53_coco', pretrained=True)
+
 planes = np.empty((0, 4, 3))
 plane_labels = np.empty((0,1))
+
+objects = np.empty((1, 4, 4))
+object_labels = np.empty((0,1))
+
 lock = threading.Lock()
 capture = False
+
 bridge = CvBridge()
 chair_mesh = load_chair_mesh()
 
@@ -172,7 +179,8 @@ def process_capture(img, camera_T, pcd):
     global planes, plane_labels
     
     start_time = time.time()
-    
+    camera_pos = camera_T[0:3, 3]
+
     # yolo object detection
     class_ids, confidences, boxes = yolo_predict(img)
     rospy.loginfo("Yolo found {} objects:".format(len(class_ids)))
@@ -200,27 +208,28 @@ def process_capture(img, camera_T, pcd):
         # project its frustum into 3D and make a point cloud with all points inside
         pcd_bbox = pcd_from_bbox(bbox, camera_T, pcd)
 
-        # remove points that should be hidden from the camera
-        pcd_bbox = frustum_hidden_point_removal(pcd_bbox, camera_pos)
+        
 
         # only proceed when the cut out point cloud has enough points
-        if  len(pcd_bbox.points) < 20:
+        if  len(pcd_bbox.points) < 10:
             continue 
+
+        # remove points that should be hidden from the camera
+        pcd_bbox = frustum_hidden_point_removal(pcd_bbox, camera_pos)
        
+       # only proceed when the cut out point cloud has enough points
+        if  len(pcd_bbox.points) < 10:
+            continue 
         
         if int(class_id) == CHAIR: 
-            print("CHAIR")
-            camera_pos = camera_T[0:3, 3]
-
+            print("YOLO detected chair")
+            
             chair_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
             chair_T, rmse = icp_fit_object(chair_cloud, pcd_bbox, camera_pos)
-            print(chair_T)
-            print(rmse)
-
-            cm = chair_mesh.copy()
-            cm.transform(chair_T)
-            o3d.visualization.draw_geometries([cm, pcd])
             
+            print("Found chair transform with RMSE: ", rmse)
+            objects = np.array([chair_T])
+            object_labels = np.array([CHAIR])            
 
 
         # fit a plane for flat objects
@@ -279,18 +288,29 @@ def area_of_plane(corners):
     return area
 
 def send_planes(planes, plane_labels):
+    planes = planes.copy()
+    plane_labels = plane_labels.copy()
     planes = planes.astype(np.float32)
     plane_labels = plane_labels.astype(np.int32)
     data = planes.tobytes() + plane_labels.tobytes()
     plane_sender.send(data)
     plane_sender.log("Sent {} planes to unity".format(planes.shape[0]))
 
-
+def send_objects(objects, object_labels): 
+    objects = objects.copy()
+    object_labels = object_labels.copy()
+    objects = objects.astype(np.float32)
+    object_labels = object_labels.astype(np.int32)
+    data = objects.tobytes() + object_labels.tobytes()
+    # object_sender.send(data)
+    # object_sender.log("Sent {} objects to unity".format(objects.shape[0]))
 
 def main():
-    global plane_sender
+    global plane_sender, object_sender
     plane_sender = UnitySender(HOST, PORT_PLANES, 'Plane Sender')
+    object_sender = UnitySender(HOST, PORT_OBJECTS, 'Object Sender')
     plane_sender.start()
+    object_sender.start()
 
     rospy.init_node('segmentation_node', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)

@@ -2,12 +2,14 @@
     <!-- Launch rtabmap -->
     <include file="$(find MRMapper)/launch/launch_rtabmap.xml" />
 
-
     <!-- Launch camera publisher -->
     <node name="camera_publisher" pkg="MRMapper" type="camera_publisher.py" output="screen"></node>
 
     <!-- Launch unity subscriber -->
-    <node name="unity_subscriber" pkg="MRMapper" type="unity_subscriber.py" output="screen"></node> 
+    <node name="odom_to_unity" pkg="MRMapper" type="odom_to_unity.py" output="screen"></node> 
+
+    <!-- Launch unity subscriber -->
+    <node name="pcd_to_unity" pkg="MRMapper" type="pcd_to_unity.py" output="screen"></node> 
 
     <!-- Launch segmentation -->
     <node name="segmentation" pkg="MRMapper" type="segmentation.py" output="screen"></node> 
@@ -18,6 +20,4 @@
     <node pkg="tf" type="static_transform_publisher" name="camera_base_link"
         args="$(arg optical_rotate)  base_link camera_link 100" /> 
 
-    <!-- Launch rviz -->
-    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/>  -->
 </launch>
