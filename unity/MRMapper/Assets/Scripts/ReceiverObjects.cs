@@ -3,158 +3,141 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 using UnityEngine;
+using UnityEngine.XR;
+using static UnityEditor.PlayerSettings;
 
-public class ReceiverObjects : MonoBehaviour
+
+public class ReceiveObjects : RosReceiver
 {
-    private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
-    private Receiver receiver;
 
-    private List<GameObject> objects = new List<GameObject>();
+    int port = 5004;
+    string log_tag = "Objt Receiver";
 
-    //private List<GameObject> gameObjects; 
 
     public void Start()
     {
-        // ROS to unity coordinate correction 
-        this.transform.rotation = Quaternion.Euler(90, 90, 180);
-
-        // callback for receiver
-        Action<byte[]> callback = (data) => {
-            runOnMainThread.Enqueue(
-            () => {
-
-
-            });
-        };
-
-        // start receiver 
-        receiver = new Receiver("127.0.0.1", 5004, "Object Receiver");
-        receiver.Start(callback);
+        Setup(port, log_tag, ProcessReceivedBytes);
     }
 
-
-    // Update is called once per frame
-    public void Update()
+    private void ProcessReceivedBytes(byte[] data)
     {
-        if (!runOnMainThread.IsEmpty)
-        {
-            Action action;
-            while (runOnMainThread.TryDequeue(out action))
-            {
-                action.Invoke();
-            }
+        int numObjts = data.Length / 32;
+        
+        
+        for (int i = 0; i < numObjts; i++) { 
+            int offset = i * 28;
+
+            float[] v = new float[3];
+            v[0] = BitConverter.ToSingle(data, offset + 0);
+            v[1] = BitConverter.ToSingle(data, offset + 4);
+            v[2] = BitConverter.ToSingle(data, offset + 8);
+            Vector3 pos = RtabVecToUnity(v);
+
+            float[] q = new float[4];
+            q[0] = BitConverter.ToSingle(data, offset + 12);
+            q[1] = BitConverter.ToSingle(data, offset + 16);
+            q[2] = BitConverter.ToSingle(data, offset + 20);
+            q[3] = BitConverter.ToSingle(data, offset + 24);
+            Quaternion rot = RtabQuatToUnity(q);
         }
-    }
-
-
-    private void RenderPlanarPatches(List<Transform> new_objects, List<int> object_labels)
-    {
-        // remove rendered planes
-        while (objects.Count > 0)
-        {
-            GameObject g = objects[0];
-            objects.Remove(g);
-            Destroy(g);
-        }
-
-        for (int i = 0; i < new_objects.Count;i++)
-        {
-            int label = object_labels[i];   
-
+        
+        for (int j = 0; j < numObjts; j++) {
+            int offset = numObjts * 28;
+            int class_id = data[offset+j];
+            string class_name = classes[class_id];
         }
 
     }
 
 
-
-    private void OnDestroy()
-    {
-        receiver.Stop();
-    }
 
     string[] classes = {
-        "person",
-        "bicycle",
-        "car",
-        "motorcycle",
-        "airplane",
-        "bus",
-        "train",
-        "truck",
-        "boat",
-        "traffic light",
-        "fire hydrant",
-        "stop sign",
-        "parking meter",
-        "bench",
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-        "backpack",
-        "umbrella",
-        "handbag",
-        "tie",
-        "suitcase",
-        "frisbee",
-        "skis",
-        "snowboard",
-        "sports ball",
-        "kite",
-        "baseball bat",
-        "baseball glove",
-        "skateboard",
-        "surfboard",
-        "tennis racket",
-        "bottle",
-        "wine glass",
-        "cup",
-        "fork",
-        "knife",
-        "spoon",
-        "bowl",
-        "banana",
-        "apple",
-        "sandwich",
-        "orange",
-        "broccoli",
-        "carrot",
-        "hot dog",
-        "pizza",
-        "donut",
-        "cake",
-        "chair",
-        "couch",
-        "potted plant",
-        "bed",
-        "dining table",
-        "toilet",
-        "tv",
-        "laptop",
-        "mouse",
-        "remote",
-        "keyboard",
-        "cell phone",
-        "microwave",
-        "oven",
-        "toaster",
-        "sink",
-        "refrigerator",
-        "book",
-        "clock",
-        "vase",
-        "scissors",
-        "teddy bear",
-        "hair drier",
-        "toothbrush" };
+    "person",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "airplane",
+    "bus",
+    "train",
+    "truck",
+    "boat",
+    "traffic light",
+    "fire hydrant",
+    "stop sign",
+    "parking meter",
+    "bench",
+    "bird",
+    "cat",
+    "dog",
+    "horse",
+    "sheep",
+    "cow",
+    "elephant",
+    "bear",
+    "zebra",
+    "giraffe",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "tie",
+    "suitcase",
+    "frisbee",
+    "skis",
+    "snowboard",
+    "sports ball",
+    "kite",
+    "baseball bat",
+    "baseball glove",
+    "skateboard",
+    "surfboard",
+    "tennis racket",
+    "bottle",
+    "wine glass",
+    "cup",
+    "fork",
+    "knife",
+    "spoon",
+    "bowl",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "chair",
+    "couch",
+    "potted plant",
+    "bed",
+    "dining table",
+    "toilet",
+    "tv",
+    "laptop",
+    "mouse",
+    "remote",
+    "keyboard",
+    "cell phone",
+    "microwave",
+    "oven",
+    "toaster",
+    "sink",
+    "refrigerator",
+    "book",
+    "clock",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "hair drier",
+    "toothbrush" };
 }
-
 
 

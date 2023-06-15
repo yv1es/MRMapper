@@ -142,17 +142,11 @@ def obox_to_corners(obb):
 
 
 def load_chair_mesh():
-    chair_size = 1.30 # size of the chair in meters along its longes extend 
     chair_mesh = o3d.io.read_triangle_mesh(CHAIR_MESH_PATH)
-    chair_points = chair_mesh.vertices
-    max_extent = np.amax(chair_points, axis=0)
-    min_extent = np.amin(chair_points, axis=0)
-    size = max_extent - min_extent
-    scaling =  chair_size / np.max(size)
-    chair_mesh.paint_uniform_color([0, 0, 1]) 
     chair_mesh.compute_vertex_normals()
-    chair_mesh.scale(scaling, center=chair_mesh.get_center())
+    chair_mesh.paint_uniform_color([0, 0, 1]) 
     return chair_mesh
+
 
 def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
 

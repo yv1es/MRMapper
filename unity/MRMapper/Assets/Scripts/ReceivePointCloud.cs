@@ -12,22 +12,21 @@ using UnityEngine;
 using UnityEngine.XR;
 
 
-public class ReceivePointCloud : MonoBehaviour
+public class ReceivePointCloud : RosReceiver
 {
-    private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
-    private Receiver receiver;
-    public float pointSize = 1f;
 
     Mesh mesh;
     MeshFilter meshFilter;
     MeshRenderer meshRenderer;
+    public float pointSize = 1f;
+
+
+    int port = 5001;
+    string log_tag = "Pcd Receiver";
 
 
     public void Start()
     {
-        // ROS to unity coordinate correction 
-        this.transform.rotation = Quaternion.Euler(90, 90, 180); 
-        
         // setup point cloud mesh renderer 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
@@ -36,40 +35,15 @@ public class ReceivePointCloud : MonoBehaviour
         meshRenderer.material.SetFloat("_PointSize", pointSize);
 
 
-        // callback for receiver
-        Action<byte[]> callback = (data) => {
-            runOnMainThread.Enqueue(
-            () => {
-                RenderPointCloud(data); 
-            });
-        };
-
-        // start receiver 
-        receiver = new Receiver("127.0.0.1", 5001, "Pcl Receiver");
-        receiver.Start(callback);
+        Setup(port, log_tag, ProcessReceivedBytes);
     }
 
-
-    // Update is called once per frame
-    public void Update()
+    private void ProcessReceivedBytes(byte[] data)
     {
-        if (!runOnMainThread.IsEmpty)
-        {
-            Action action;
-            while (runOnMainThread.TryDequeue(out action))
-            {
-                action.Invoke();
-            }
-        }
+        RenderPointCloud(data);
     }
 
 
-    private void OnDestroy()
-    {
-        receiver.Stop();
-    }
-
-    
     void RenderPointCloud(byte[] pointCloudData)
     {
         List<Vector3> points = new List<Vector3>();
@@ -79,10 +53,11 @@ public class ReceivePointCloud : MonoBehaviour
         for (int i = 0; i < numPoints; i++)
         {
             int offset = i * 32;
-            float x = BitConverter.ToSingle(pointCloudData, offset);
-            float y = BitConverter.ToSingle(pointCloudData, offset + 4);
-            float z = -BitConverter.ToSingle(pointCloudData, offset + 8);
-            points.Add(new Vector3(x, y, z));
+            float[] v = new float[3];
+            v[0] = BitConverter.ToSingle(pointCloudData, offset);
+            v[1] = BitConverter.ToSingle(pointCloudData, offset + 4);
+            v[2] = BitConverter.ToSingle(pointCloudData, offset + 8);
+            points.Add(RtabVecToUnity(v));
 
             Color color = new Color(pointCloudData[offset + 18] / 255f, pointCloudData[offset + 17] / 255f, pointCloudData[offset + 16] / 255f);
             colors.Add(color);

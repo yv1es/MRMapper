@@ -10,63 +10,46 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.XR;
+using static UnityEditor.PlayerSettings;
 
-public class ReceiveOdom : MonoBehaviour
+
+public class ReceiveOdom : RosReceiver
 {
-    private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();
-    private Receiver receiver;
-   
 
-    public void Start()
+    int port = 5002;
+    string log_tag = "Odom Receiver"; 
+    
+    
+    public void Start() {
+        Setup(port, log_tag, ProcessReceivedBytes);
+    }    
+    
+    private void ProcessReceivedBytes(byte[] data)
     {
-        // callback for receiver 
-        Action<byte[]> callback = (data) => {
-            runOnMainThread.Enqueue(
-                () => {
-                
-                // coordinate conversions from ROS to unity 
-                Vector3 pos = new Vector3();
-                pos.z = BitConverter.ToSingle(data, 0);
-                pos.x = -BitConverter.ToSingle(data, 4);
-                pos.y = BitConverter.ToSingle(data, 8);
+        float[] v = new float[3];
+        v[0] = BitConverter.ToSingle(data, 0);
+        v[1] = BitConverter.ToSingle(data, 4);
+        v[2] = BitConverter.ToSingle(data, 8);
+        Vector3 pos = RtabVecToUnity(v);
 
-                Quaternion rot = new Quaternion();
-                rot.z = -BitConverter.ToSingle(data, 12);
-                rot.x = BitConverter.ToSingle(data, 16);
-                rot.y = -BitConverter.ToSingle(data, 20);
-                rot.w = BitConverter.ToSingle(data, 24);
-                
-                // update camera transform 
-                if (pos != Vector3.zero)
-                {
-                    transform.position = pos;  
-                    transform.rotation = rot;  
-                }
-            });
-        };
+        float[] q = new float[4];
+        q[0] = BitConverter.ToSingle(data, 12);
+        q[1] = BitConverter.ToSingle(data, 16);
+        q[2] = BitConverter.ToSingle(data, 20);
+        q[3] = BitConverter.ToSingle(data, 24);
+        Quaternion rot = RtabQuatToUnity(q);
 
-        // start receiver 
-        receiver = new Receiver("127.0.0.1", 5002, "Odom Receiver");
-        receiver.Start(callback);
-    }
-
-
-    public void Update()
-    {
-        if (!runOnMainThread.IsEmpty)
+        // update camera transform 
+        if (pos != Vector3.zero)
         {
-            Action action;
-            while (runOnMainThread.TryDequeue(out action))
-            {
-                action.Invoke();
-            }
+            transform.position = pos;
+            transform.rotation = rot;
         }
-    }
+    } 
 
-    private void OnDestroy()
-    {
-        receiver.Stop();
-    }        
+
+
+
 }
 
 

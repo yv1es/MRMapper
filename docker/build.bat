@@ -1,3 +1,3 @@
 @echo off 
 echo Running container
-docker build -t mrmapper-plane-seg .
+docker build -t mrmapper .

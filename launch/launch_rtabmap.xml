@@ -68,5 +68,11 @@
       <param name="subscribe_rgbd"  type="bool" value="true"/>
     </node>   -->
             
-  </group>
+    <!-- RTABmap needs the transform from base_link to camera_link (see more: http://wiki.ros.org/rtabmap_ros/Tutorials/StereoHandHeldMapping -->
+    <arg name="pi/2" value="1.5707963267948966" />
+    <arg name="optical_rotate" value="0 0 0 -$(arg pi/2) 0 -$(arg pi/2)" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_base_link"
+        args="$(arg optical_rotate)  base_link camera_link 100" />
+
+  </group>      
 </launch>

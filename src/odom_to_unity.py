@@ -5,7 +5,7 @@ from nav_msgs.msg import Odometry
 
 from unity_sender import UnitySender 
 from constants import *
-
+import tf
 
 def callback_odom(odom):
     position = odom.pose.pose.position 
@@ -24,8 +24,8 @@ def main():
 
     rospy.loginfo("Connection to unity established")
     rospy.Subscriber("/rtabmap/odom", Odometry, callback_odom)
-    rospy.spin()
 
+    rospy.spin()
 
 
 if __name__ == '__main__':

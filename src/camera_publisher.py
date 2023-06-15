@@ -61,7 +61,7 @@ def main():
     camera_info = setupCameraInfo()
     bridge = CvBridge()
 
-    rospy.loginfo("Waiting for streamer connection")
+    rospy.loginfo("[Camera publisher] Waiting for streamer connection")
     socket = setupSocket()
     conn, address = socket.accept()
     rospy.loginfo("Streamer connected")
@@ -107,13 +107,13 @@ def main():
         if indx % fps_counter == 0: 
             elapsed_time = time.time() - start_time
             fps = fps_counter / (elapsed_time)
-            rospy.loginfo(f"FPS: {fps}")
+            # rospy.loginfo(f"FPS: {fps}")
             start_time = time.time()
 
         indx += 1
         
     conn.close() 
-    rospy.loginfo("Streamer disconnected")
+    # rospy.loginfo("Streamer disconnected")
 
 
 

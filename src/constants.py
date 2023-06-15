@@ -40,7 +40,7 @@ YOLO_CONFIDENCE_TRESHOLD = 0.3
 FLAT = {59, 60, 66, 67, 62, 63, 73}
 CHAIR = 56
 
-CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/office_chair.stl"
+CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
 
 # lables for the yolo class ids
 

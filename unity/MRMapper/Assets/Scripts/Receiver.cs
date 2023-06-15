@@ -62,7 +62,6 @@ public class Receiver
 
                     if (totalBytesRead == dataLength)
                     {
-                        log("Received " + dataLength + " bytes");
                         ((Action<byte[]>)callback)(dataBuffer);
                     }
 
