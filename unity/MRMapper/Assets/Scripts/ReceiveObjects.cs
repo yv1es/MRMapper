@@ -19,9 +19,20 @@ public class ReceiveObjects : RosReceiver
     int port = 5004;
     string log_tag = "Objt Receiver";
 
+    Mesh chairMesh; 
 
     public void Start()
     {
+        GameObject meshObject = Resources.Load<GameObject>("56");
+        chairMesh = meshObject.transform.GetChild(0).GetComponent<MeshFilter>().sharedMesh;
+           
+
+
+        if (!(chairMesh != null && chairMesh.vertexCount > 0 && chairMesh.triangles.Length > 0))
+        {
+            Debug.LogWarning("Invalid chairMesh. Please make sure it contains valid vertex and triangle data.");
+        }
+
         Setup(port, log_tag, ProcessReceivedBytes);
     }
 
@@ -31,7 +42,7 @@ public class ReceiveObjects : RosReceiver
         
         
         for (int i = 0; i < numObjts; i++) { 
-            int offset = i * 28;
+            int offset = i * 32;
 
             float[] v = new float[3];
             v[0] = BitConverter.ToSingle(data, offset + 0);
@@ -44,16 +55,32 @@ public class ReceiveObjects : RosReceiver
             q[1] = BitConverter.ToSingle(data, offset + 16);
             q[2] = BitConverter.ToSingle(data, offset + 20);
             q[3] = BitConverter.ToSingle(data, offset + 24);
-            Quaternion rot = RtabQuatToUnity(q);
-        }
-        
-        for (int j = 0; j < numObjts; j++) {
-            int offset = numObjts * 28;
-            int class_id = data[offset+j];
-            string class_name = classes[class_id];
+            Quaternion rot = RtabQuatToUnity(q) * Quaternion.Euler(-90, 0, 90);
+               
+            int class_id = (int)BitConverter.ToSingle(data, offset + 28);
+            Debug.Log("Received a " +  class_id);
+
+
+            GameObject go = new GameObject("chair");
+            
+            Transform transform = go.transform;
+            transform.position = pos;
+            transform.rotation = rot;
+
+            go.AddComponent<MeshFilter>();
+            go.AddComponent<MeshRenderer>();
+
+            MeshFilter meshFilter = go.GetComponent<MeshFilter>();
+            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
+            meshFilter.mesh = chairMesh;
+
+            Material defaultMaterial = new Material(Shader.Find("Standard"));
+            meshRenderer.material = defaultMaterial;
+
         }
 
     }
+
 
 
 
