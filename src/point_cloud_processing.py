@@ -217,21 +217,22 @@ def iterative_icp(obj_pcd, scene_pcd, inital_T):
 def fit_plane(pcd):
     """
     Fits a plane to the point cloud and returns the inlier points, oriented bounding box, and fit rate.
-
+    
     Args:
         pcd (open3d.geometry.PointCloud): The point cloud.
 
     Returns:
-        tuple: A tuple containing the inlier point cloud, the oriented bounding box, and the fit rate.
+        tuple: A tuple containing the oriented bounding box, and the fit rate.
     """
     _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
     inlier_cloud = pcd.select_by_index(inliers)
-    inlier_cloud = keep_largest_cluster(inlier_cloud)
+    # inlier_cloud = keep_largest_cluster(inlier_cloud)
+    if (len(inlier_cloud.points) == 0):
+        return o3d.geometry.OrientedBoundingBox(), 0
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
     fit_rate = len(inlier_cloud.points) / len (pcd.points)
-    fit_rate = min(FIT_RATE_NORMALIZATION, fit_rate) / FIT_RATE_NORMALIZATION 
 
-    return inlier_cloud, obox, fit_rate
+    return obox, fit_rate
 
 
 
@@ -239,6 +240,7 @@ def fit_plane(pcd):
 def keep_largest_cluster(pcd):
     """
     Keeps the largest cluster from the point cloud using DBSCAN clustering.
+    Retruns an empyt point cloud when no cluster was found. 
 
     Args:
         pcd (open3d.geometry.PointCloud): The point cloud.
@@ -246,8 +248,10 @@ def keep_largest_cluster(pcd):
     Returns:
         open3d.geometry.PointCloud: The largest cluster point cloud.
     """
-    labels = np.array(pcd.cluster_dbscan(eps=0.075, min_points=4))
+    labels = np.array(pcd.cluster_dbscan(eps=DBSCAN_EPS, min_points=DBSCAN_MIN_POINTS))
     label_counts = np.bincount(labels[labels != -1])
+    if label_counts.shape[0] == 0:
+        return o3d.geometry.PointCloud()
     most_common_label = np.argmax(label_counts)
     indices = np.where(labels == most_common_label)[0]
     pcd = pcd.select_by_index(indices)

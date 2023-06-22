@@ -63,12 +63,12 @@ def capture_callback(event):
         return
     else:
         try:
-            capture()
+            make_capture()
         finally:
             lock.release()
 
 
-def capture():
+def make_capture():
     """
     After this function is called it, captures the first camera frame, camera transform and point cloud that is published after the call. 
     It converts the caputred ROS messages into OpenCv, numpy and Open3d typed objects and calls process_capture with the converted triplet.  
@@ -207,8 +207,8 @@ def process_capture(img, camera_transform, pcd):
             log("Detection {}: Starting plane fitting".format(i))
             
             # plane segmantation
-            _, obox, fit_rate = fit_plane(pcd_bbox)
-
+            obox, fit_rate = fit_plane(pcd_bbox)
+            
             log("Detection {}: fitted plane with fit_rate={}".format(i, fit_rate))
             if fit_rate < MIN_FIT_RATE: 
                 log("Detection {}: fit_rate was too low".format(i))
@@ -323,6 +323,9 @@ def main():
     # set timer for capture callback 
     rospy.Timer(rospy.Duration(FREQ_SEMANTIC_INFERENCE), capture_callback)
     rospy.spin()
+
+
+
 
 
 
@@ -454,10 +457,10 @@ class Plane:
         Returns:
             float: The distance between the planes.
         """
-        if self._class_id != other_plane.getClassId():
+        if self._class_id != other_plane.get_class_id():
             return INF 
         area_factor = min(self.area() / AREA_NORMALIZATION, 1)
-        sum_squared_diff = np.sum((self._corners - other_plane.getCorners()) ** 2)
+        sum_squared_diff = np.sum((self._corners - other_plane.get_corners()) ** 2)
         return sum_squared_diff / area_factor
 
     def update(self, p): 
@@ -474,9 +477,10 @@ class Plane:
             None
         """
         area_factor = min(self.area() / AREA_NORMALIZATION, 1)
-        k = PLANE_UPDATE_WEIGHT * area_factor * self._fit_rate ** 2
+        # k = PLANE_UPDATE_WEIGHT * area_factor * self._fit_rate ** 2
+        k = PLANE_UPDATE_WEIGHT
         log("Plane update weight={}".format(k))
-        self._corners = self._corners * (1-k) + p.getCorners() * k
+        self._corners = self._corners * (1-k) + p.get_corners() * k
 
     def area(self):
         """
@@ -553,9 +557,9 @@ class ICPObject:
         Returns:
             float: The distance between the objects.
         """
-        if self._class_id != new_object.getClassId():
+        if self._class_id != new_object.get_class_id():
             return INF 
-        sum_squared_diff = np.sum((self._transform - new_object.getTransform()) ** 2)
+        sum_squared_diff = np.sum((self._transform - new_object.get_transform()) ** 2)
         return sum_squared_diff
 
     def update(self, new_object): 
@@ -568,7 +572,7 @@ class ICPObject:
             new_object (ICPObject): The object to update from.
         """
         k = ICP_OBJECT_UPDATE_WEIGHT
-        self._transform = self._transform * (1-k) + new_object.getTransform() * k 
+        self._transform = self._transform * (1-k) + new_object.get_transform() * k 
     
     def get_transform(self): 
         return self._transform
