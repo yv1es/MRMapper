@@ -12,6 +12,6 @@
     <node name="pcd_to_unity" pkg="MRMapper" type="pcd_to_unity.py" output="screen"></node> 
 
     <!-- Launch segmentation -->
-    <node name="segmentation" pkg="MRMapper" type="segmentation.py" output="screen"></node> 
+    <node name="semantic_inference" pkg="MRMapper" type="semantic_inference.py" output="screen"></node> 
     
 </launch>

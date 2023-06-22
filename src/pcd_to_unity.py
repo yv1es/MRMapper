@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import rospy
-import numpy as np
 from sensor_msgs.msg import PointCloud2
 
 from unity_sender import UnitySender 
 from constants import *
+
+"""
+This node sends the point cloud published by rtabmap_ros to unity 
+"""
+
 
 def callback_cloud_map(cloud_map):   
     data = cloud_map.data

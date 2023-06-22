@@ -5,6 +5,7 @@ import open3d as o3d
 import numpy as np
 import cv2
 import copy
+import matplotlib.pylab as plt
 
 def main():
     # Get the folder path from the command line argument
@@ -97,10 +98,25 @@ def main():
     camera_pos = extrinsics[0:3, 3]
 
     # o3d.visualization.draw_geometries([pcd, object_ls])
-    o3d.visualization.draw_geometries([pcd, object_ls])
+    # o3d.visualization.draw_geometries([pcd, object_ls])
 
+    o3d.visualization.draw_geometries([point_cloud])
     point_cloud = frustum_hidden_point_removal(point_cloud, camera_pos)
+    o3d.visualization.draw_geometries([point_cloud])
+    
 
+
+
+
+    point_cloud = keep_largest_cluster(point_cloud)
+
+
+
+
+
+
+
+    exit()
     # the objects point cloud 
     chair_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
 
@@ -115,6 +131,30 @@ def main():
     o3d.visualization.draw_geometries([transformed_chair_mesh, pcd])
     
 
+
+def keep_largest_cluster(pcd, k=1):
+    #  clustering
+    labels = np.array(pcd.cluster_dbscan(eps=0.075, min_points=4))
+    label_counts = np.bincount(labels[labels != -1])
+
+    most_common_label = np.argmax(label_counts)
+    
+    indices = np.where(labels == most_common_label)[0]
+
+    pcd = pcd.select_by_index(indices)
+
+    print(labels)
+    print(label_counts)
+    print(most_common_label)
+    print(indices)
+
+    max_label = labels.max()
+    print(f"point cloud has {max_label + 1} clusters")
+    colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
+    colors[labels < 0] = 0
+    pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+    o3d.visualization.draw_geometries([pcd])
+    return pcd
 
 
 

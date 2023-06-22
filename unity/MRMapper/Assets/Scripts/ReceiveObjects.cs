@@ -19,6 +19,8 @@ public class ReceiveObjects : RosReceiver
     int port = 5004;
     string log_tag = "Objt Receiver";
 
+    private List<GameObject> rendered_icp_objects = new List<GameObject>();
+
     Mesh chairMesh; 
 
     public void Start()
@@ -38,6 +40,16 @@ public class ReceiveObjects : RosReceiver
 
     private void ProcessReceivedBytes(byte[] data)
     {
+
+        // remove previously rendered objects
+        while (rendered_icp_objects.Count > 0)
+        {
+            GameObject g = rendered_icp_objects[0];
+            rendered_icp_objects.Remove(g);
+            Destroy(g);
+        }
+
+
         int numObjts = data.Length / 32;
         
         
@@ -77,9 +89,10 @@ public class ReceiveObjects : RosReceiver
             Material defaultMaterial = new Material(Shader.Find("Standard"));
             meshRenderer.material = defaultMaterial;
 
+            rendered_icp_objects.Add(go); 
         }
 
-    }
+    }    
 
 
 

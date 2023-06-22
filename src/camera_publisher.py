@@ -17,6 +17,11 @@ from constants import *
 fps_counter = 50
 
 
+""" 
+This node receives the RGBD camera stream over tcp from the host machine and publishes it for rtabmap_ros.  
+"""
+
+
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
     socket.bind((HOST, PORT_CAMERA)) 

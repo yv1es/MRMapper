@@ -5,7 +5,11 @@ from nav_msgs.msg import Odometry
 
 from unity_sender import UnitySender 
 from constants import *
-import tf
+
+""" 
+This node sends the current camera position and orientation from rtabmap_ros to unity. 
+"""
+
 
 def callback_odom(odom):
     position = odom.pose.pose.position 
