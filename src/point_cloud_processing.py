@@ -1,17 +1,30 @@
 # !/usr/bin/env python3
-import rospy
-from sensor_msgs.msg import PointCloud2, Image
-from sensor_msgs.point_cloud2 import read_points
-import struct
 import open3d as o3d
 import numpy as np
+import copy 
 
-from unity_sender import UnitySender 
 from constants import *
+from utils import *
 
-frustum_depth = 10
+
+""" 
+This file contains function operating on (Open3d) point clouds that are used mostly in the semantic inference stage. 
+"""
+
 
 def pcd_from_bbox(box, extrinsics, pcd):
+    """
+    Projects a 2D bouding box on the camera plane into a 3D frustum and creates 
+    a point cloud from all points within that frustum. 
+
+    Args:
+        box (tuple): The bounding box coordinates (x1, y1, x2, y2)  (left-top, right-bottom points).
+        extrinsics (ndarray): The extrinsic matrix (encoding the camera postition).
+        pcd (open3d.geometry.PointCloud): The global point cloud.
+
+    Returns:
+        open3d.geometry.PointCloud: The point cloud within the frustum spun by the bounding box.
+    """
     intrinsics = np.array(CAMERA_K).reshape((3, 3))
 
     x1, y1, x2, y2 = box
@@ -24,7 +37,7 @@ def pcd_from_bbox(box, extrinsics, pcd):
     ])
 
     # compute mesh of frustum goint through the object corners
-    object_frustum = frustum_mesh_from_image_coords(object_corners, 10, intrinsics, extrinsics, FRAME_WIDTH, FRAME_HEIGHT)
+    object_frustum = frustum_mesh_from_image_coords(object_corners, 10, intrinsics, extrinsics)
 
     # add mesh for SDF computation 
     mesh = o3d.t.geometry.TriangleMesh.from_legacy(object_frustum)
@@ -39,9 +52,19 @@ def pcd_from_bbox(box, extrinsics, pcd):
 
 
 
-# origin is relative to the camera hence normally 0's 
-# the corners are also relative to the camera 
+
 def frustum_from_corners(origin, corners, extrinsics):
+    """
+    Generates a frustum mesh from the given 4 corners.
+
+    Args:
+        origin (ndarray): The origin of the frustum relative to the camera (hence normally zero).
+        corners (ndarray): The corners of the frustum relative to the camera.
+        extrinsics (ndarray): The extrinsic matrix (camear pose).
+
+    Returns:
+        open3d.geometry.TriangleMesh: The frustum mesh.
+    """
     mesh = o3d.geometry.TriangleMesh()
 
     faces = np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [3, 4, 1]])
@@ -54,15 +77,41 @@ def frustum_from_corners(origin, corners, extrinsics):
 
 
 # takes 2D points from the image and gives a 3D mesh of the frustum projected in 3d 
-def frustum_mesh_from_image_coords(points, frustum_depth, intrinsics, extrinsics, width, height):
-    vecs = image_points_to_direction(points, intrinsics, extrinsics, width, height) 
+def frustum_mesh_from_image_coords(points, frustum_depth, intrinsics, extrinsics):
+    """
+    Generates a 3D mesh of the frustum projected into 3D from the given 2D image coordinates.
+
+    Args:
+        points (ndarray): The 2D points from the image.
+        frustum_depth (float): The depth of the frustum.
+        intrinsics (ndarray): The intrinsic matrix.
+        extrinsics (ndarray): The extrinsic matrix.
+        width (int): The width of the image.
+        height (int): The height of the image.
+
+    Returns:
+        open3d.geometry.TriangleMesh: The frustum mesh.
+    """
+    vecs = image_points_to_direction(points, intrinsics) 
     vecs *= frustum_depth
     mesh = frustum_from_corners(np.zeros(3), vecs, extrinsics)
     return mesh
 
 
-# computes the direction unit vectors pointing from the camera to the points
-def image_points_to_direction(points, intrinsics, extrinsics, width, height):
+def image_points_to_direction(points, intrinsics):
+    """
+    Computes the direction unit vectors pointing from the camera to the 2D points on the camera plane.
+
+    Args:
+        points (ndarray): The image points.
+        intrinsics (ndarray): The intrinsic matrix.
+        extrinsics (ndarray): The extrinsic matrix.
+        width (int): The width of the image.
+        height (int): The height of the image.
+
+    Returns:
+        ndarray: The direction unit vectors.
+    """
     fx, fy = intrinsics[0,0], intrinsics[1,1]
     cx, cy = intrinsics[0,2], intrinsics[1,2]
     
@@ -79,62 +128,132 @@ def image_points_to_direction(points, intrinsics, extrinsics, width, height):
 
 
 
-def ros_pointcloud_to_o3d(pointcloud_msg):
+def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
+    """
+    Performs ICP registration to fit the object point cloud to the frustum point cloud.
+    Tries out multiple inital transforms and chooses the best based on RMSE. 
 
-    # Get the point cloud data as a list of tuples (x, y, z)
-    pointcloud_data = read_points(pointcloud_msg, skip_nans=True)
+    Args:
+        obj_pcd (open3d.geometry.PointCloud): The object point cloud.
+        frustum_pcd (open3d.geometry.PointCloud): The frustum point cloud.
+        camera_pos (ndarray): The camera position.
 
-    x_vals = []
-    y_vals = []
-    z_vals = []
-    r_vals = []
-    g_vals = []
-    b_vals = []
+    Returns:
+        tuple: A tuple containing the transformation matrix and the RMSE value.
+    """
+    frustum_mean = np.mean(np.asarray(frustum_pcd.points), axis=0)
+    initial_pos = (frustum_mean - camera_pos) * 0.5  
+    translation = np.eye(4)
+    translation[0:3, 3] = initial_pos - obj_pcd.get_center()
+   
+    # 45 degree homogeneus rotation matrix
+    y_45deg = np.array([[0.707, -0.707, 0, 0],
+                        [0.707, 0.707, 0, 0],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]])
+    
+    avg_rmse = 0
+    best_rmse = 10e10
+    best_t = None
 
-    # Iterate over the (x, y, z, c) values and append to the lists
-    for p in pointcloud_data:
-        x, y, z, c = p
-        x_vals.append(x)
-        y_vals.append(y)
-        z_vals.append(z)
-        r, g, b = float_to_color(c)
-        r_vals.append(r)
-        g_vals.append(g)
-        b_vals.append(b)
-
-    # Convert the lists to numpy arrays
-    x_vals = np.array(x_vals)
-    y_vals = np.array(y_vals)
-    z_vals = np.array(z_vals)
-    r_vals = np.array(r_vals)
-    g_vals = np.array(g_vals)
-    b_vals = np.array(b_vals)
-
-    # Concatenate the X, Y, and Z arrays into a single array
-    points = np.column_stack((x_vals, y_vals, z_vals))
-
-    # Concatenate the R, G, and B arrays into a single array
-    colors = np.column_stack((b_vals, g_vals, r_vals))
-
-    # Create an Open3D point cloud from the points and colors arrays
-    pointcloud_o3d = o3d.geometry.PointCloud()
-    pointcloud_o3d.points = o3d.utility.Vector3dVector(points)
-    pointcloud_o3d.colors = o3d.utility.Vector3dVector(colors / 255.0)
-
-    return pointcloud_o3d
+    # skip through possible initial rotations with 45 deg stride
+    for k in range(8):
+        t = translation @ np.linalg.matrix_power(y_45deg, k) 
+        t, rmse = iterative_icp(obj_pcd, frustum_pcd, t)
+        avg_rmse += rmse/8
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_t = t
+    
+    return best_t, best_rmse
 
 
-def float_to_color(f):
-    # Convert the float to bytes
-    b = struct.pack('f', f)
+def frustum_hidden_point_removal(pcd, camera_pos):
+    """
+    Removes hidden points from the point cloud based on the camera position.
 
-    # Extract the red, green, and blue components from the first three bytes
-    r, g, b = struct.unpack('BBB', b[:3])
-    return r, g, b
+    Args:
+        pcd (open3d.geometry.PointCloud): The point cloud.
+        camera_pos (ndarray): The camera position.
+
+    Returns:
+        open3d.geometry.PointCloud: The filtered point cloud.
+    """
+    frustum_mean = np.mean(np.asarray(pcd.points), axis=0)
+    radius = np.linalg.norm(frustum_mean - camera_pos) * 300
+    _, pt_map = pcd.hidden_point_removal(camera_pos, radius)
+    pcd = pcd.select_by_index(pt_map)
+    return pcd
 
 
-def obox_to_corners(obb):
-    plane = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb, scale=[1, 1, 1e-30])
-    points = np.asarray(plane.vertices)
-    points = np.unique(points, axis=0)
-    return points
+
+def iterative_icp(obj_pcd, scene_pcd, inital_T):
+    """
+    Performs iterative ICP registration between the object point cloud and the scene point cloud.
+
+    Args:
+        obj_pcd (open3d.geometry.PointCloud): The object point cloud.
+        scene_pcd (open3d.geometry.PointCloud): The scene point cloud.
+        inital_T (ndarray): The initial transformation matrix.
+
+    Returns:
+        tuple: A tuple containing the transformation matrix and the RMSE value.
+    """
+    obj_pcd = copy.deepcopy(obj_pcd)
+    T = inital_T.copy()
+    obj_pcd.transform(T)
+
+    for mcd in [4, 2, 1, 0.5, 0.1]:
+        icp_result = o3d.pipelines.registration.registration_icp(
+            obj_pcd, scene_pcd, max_correspondence_distance=mcd,
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
+        obj_pcd.transform(icp_result.transformation)
+        T = icp_result.transformation @ T
+        rmse = icp_result.inlier_rmse
+    return T, rmse
+
+
+
+def fit_plane(pcd):
+    """
+    Fits a plane to the point cloud and returns the inlier points, oriented bounding box, and fit rate.
+    
+    Args:
+        pcd (open3d.geometry.PointCloud): The point cloud.
+
+    Returns:
+        tuple: A tuple containing the oriented bounding box, and the fit rate.
+    """
+    _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
+    inlier_cloud = pcd.select_by_index(inliers)
+    # inlier_cloud = keep_largest_cluster(inlier_cloud)
+    if (len(inlier_cloud.points) == 0):
+        return o3d.geometry.OrientedBoundingBox(), 0
+    obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
+    fit_rate = len(inlier_cloud.points) / len (pcd.points)
+
+    return obox, fit_rate
+
+
+
+
+def keep_largest_cluster(pcd):
+    """
+    Keeps the largest cluster from the point cloud using DBSCAN clustering.
+    Retruns an empyt point cloud when no cluster was found. 
+
+    Args:
+        pcd (open3d.geometry.PointCloud): The point cloud.
+
+    Returns:
+        open3d.geometry.PointCloud: The largest cluster point cloud.
+    """
+    labels = np.array(pcd.cluster_dbscan(eps=DBSCAN_EPS, min_points=DBSCAN_MIN_POINTS))
+    label_counts = np.bincount(labels[labels != -1])
+    if label_counts.shape[0] == 0:
+        return o3d.geometry.PointCloud()
+    most_common_label = np.argmax(label_counts)
+    indices = np.where(labels == most_common_label)[0]
+    pcd = pcd.select_by_index(indices)
+    max_label = labels.max()
+    return pcd

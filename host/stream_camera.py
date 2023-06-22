@@ -13,6 +13,11 @@ FPS = 60
 HOST = s.gethostname() 
 PORT = 5000 
 
+"""  
+This script starts a connected Intel RealSense camera and streams the RGBD camera feed into the docker container. 
+The camera_publisher ROS node in the container receives the RGBD stram and publishes it to rtabmap_ros and MRMapper.  
+"""
+
 
 def setupSocket():
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
