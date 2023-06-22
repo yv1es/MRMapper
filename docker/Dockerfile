@@ -201,7 +201,7 @@ RUN cd ~/catkin_ws \
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/MRMapper.git \
     && cd ~/catkin_ws/src/MRMapper \
-    && git checkout icp
+    && git checkout main
 
 # install ROS packages
 RUN . /opt/ros/noetic/setup.sh \
