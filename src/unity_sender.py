@@ -17,11 +17,10 @@ class UnitySender:
         tag (str): A tag to identify the sender mainly for logging.
         sender_queue (Queue): A queue to hold the data to be sent.
         running (bool): A flag indicating if the sender is running.
-        conn (socket): The socket connection to Unity.
 
     Methods:
         __init__(self, ip, port, tag): Initializes the UnitySender instance.
-        start(self): Starts the sender and establishes a connection to Unity.
+        start(self): Starts the sender and listenes to a incoming Unity connection.
         log(self, message): Logs a message with the specified tag.
         senderThread(self): The thread function for sending data to Unity.
         send(self, data): Adds data to the sender queue for sending.
@@ -34,44 +33,61 @@ class UnitySender:
         self.tag = tag
         self.sender_queue = queue.Queue()
         self.running = True
-        self.conn = None
-        
+        self.MAX_SENDER_QUEUE_LENGTH = 5
 
     def start(self):
         self.socket = s.socket(s.AF_INET, s.SOCK_STREAM)
         self.socket.bind((self.ip, self.port)) 
         self.socket.listen()
-        self.log("Listening incoming unity connection")
-        self.conn, _ = self.socket.accept()
-        self.log("Connected to unity")
 
-        self.sender = threading.Thread(target=self.senderThread)
-        self.sender.daemon = True
-        self.sender.start()
-        self.log("Sender thread running")
- 
+        self.listener = threading.Thread(target=self.listenerThread)
+        self.listener.deamon = True 
+        self.listener.start()
+
+        
+    
+    def listenerThread(self):
+        while self.running:
+            self.log("Listening for incoming unity connection")
+            
+            conn, _ = self.socket.accept()
+            self.log("Established connection to unity")
+
+            try:
+                self.senderThread(conn)
+            finally:
+                conn.close()
+            self.log("Connection to unity closed")
+
 
     def log(self, message):
         rospy.loginfo("[{}] {}".format(self.tag, message))
 
 
-    def senderThread(self):
+    def senderThread(self, conn):
         while self.running:
                 try:
                     data = self.sender_queue.get(timeout=1)
-                    self.conn.sendall(data)
+                    conn.sendall(data)
                     self.sender_queue.task_done()
                 except queue.Empty:
                     pass
+                except Exception as e:
+                    print("An exception occurred:", e)
+                    return 
 
-
+    # synchronized this function
+    lock = threading.Lock()
     def send(self, data):
-        header = struct.pack('!I', len(data))
-        message = header + data
-        self.sender_queue.put(message)
+        with self.lock: 
+            header = struct.pack('!I', len(data))
+            message = header + data
+            self.sender_queue.put(message)
 
+            # Check if the queue has reached the maximum length
+            if self.sender_queue.qsize() > self.MAX_SENDER_QUEUE_LENGTH:
+                self.sender_queue.get()
 
     def stop(self):
         self.running = False
-        self.conn.close()
         self.socket.close()
