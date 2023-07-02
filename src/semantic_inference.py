@@ -314,6 +314,7 @@ def main():
     plane_sender.start()
     icp_object_sender.start()
 
+
     # subscribe to topics
     rospy.init_node('semantic_inference', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)
@@ -608,5 +609,6 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         plane_sender.stop()
+        icp_object_sender.stop()
 
 
