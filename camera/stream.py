@@ -39,11 +39,11 @@ def setup_realsense():
             found_rgb = True
             break
     if not found_rgb:
-        print("The demo requires Depth camera with Color sensor")
+        print("Requires Depth camera with Color sensor")
         exit(0)
 
-    config.enable_stream(rs.stream.depth, FRAME_WIDTH, FRAME_HEIGHT,  rs.format.z16, FPS)
     config.enable_stream(rs.stream.color, FRAME_WIDTH, FRAME_HEIGHT, rs.format.rgb8, FPS)
+    config.enable_stream(rs.stream.depth, FRAME_WIDTH, FRAME_HEIGHT,  rs.format.z16, FPS)
 
     cfg = pipeline.start(config)
     profile = cfg.get_stream(rs.stream.color)  # Fetch stream profile for depth stream
@@ -87,16 +87,16 @@ def main():
                 aligned_frames = aligner.process(frames)
 
                 # Get aligned frames
-                aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
+                depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
                 color_frame = aligned_frames.get_color_frame()
 
                 # Validate that both frames are valid
-                if not aligned_depth_frame or not color_frame:
+                if not depth_frame or not color_frame:
                     continue
                 
                 # encode frames into one numpy array 
                 color_image = np.asanyarray(color_frame.get_data())
-                depth_image = np.asanyarray(aligned_depth_frame.get_data())
+                depth_image = np.asanyarray(depth_frame.get_data())
                 data = encode(color_image, depth_image)
                 
                 # Send the size of the data and then the data itself over the socket connection
