@@ -65,6 +65,7 @@ def encode(color, depth):
     _, color = cv2.imencode('.jpg', color, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
     msg = Msg(color, depth)
     msg_bytes = pickle.dumps(msg)
+    msg_bytes = struct.pack('!I', len(msg_bytes)) + msg_bytes
     return msg_bytes
 
 
@@ -98,14 +99,10 @@ def main():
                 color_image = np.asanyarray(color_frame.get_data())
                 depth_image = np.asanyarray(depth_frame.get_data())
                 data = encode(color_image, depth_image)
-                
-                # Send the size of the data and then the data itself over the socket connection
-                size = len(data)
-                socket.send(struct.pack('!I', size))
                 socket.send(data)
+                
 
         except ConnectionResetError as _:
-            print("Attempting to connect...")
             time.sleep(1)
         except ConnectionAbortedError as _:
             print("Attempting to connect...")
