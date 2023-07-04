@@ -90,8 +90,11 @@ def make_capture():
     log("Starting capture")
 
     capture = True
-    while cloud_map_msg is None or odom_msg is None or image_msg is None: 
-        continue # wait until triplet is complete
+    while cloud_map_msg is None or odom_msg is None or image_msg is None:
+        if rospy.is_shutdown():
+            return 
+        else:
+            continue # wait until triplet is complete
 
     # convert from ROS to open3d point cloud 
     pcd = ros_pointcloud_to_o3d(cloud_map_msg)
@@ -156,7 +159,7 @@ def process_capture(img, camera_transform, pcd):
         if int(class_id) not in ICP_OBJECTS | FLAT_OBJECTS: 
             continue
 
-        log("------------------------------------------")
+        log("---------")
         log("Detection {}: Starting processing".format(i))
 
         # only proceed when the bounding box has MIN_BOUNDING_BOX_MARGIN pixels distance from the frame borders
@@ -205,20 +208,14 @@ def process_capture(img, camera_transform, pcd):
         # fit a plane for flat objects
         if int(class_id) in FLAT_OBJECTS:
             log("Detection {}: Starting plane fitting".format(i))
-            
             # plane segmantation
-            obox, fit_rate = fit_plane(pcd_bbox)
+            new_plane = fit_plane(pcd_bbox)
             
-            log("Detection {}: fitted plane with fit_rate={}".format(i, fit_rate))
-            if fit_rate < MIN_FIT_RATE: 
-                log("Detection {}: fit_rate was too low".format(i))
-                continue
-            
-            log("Detection {}: Plane found".format(i))
-            # compute the 4 corner points from planes obox 
-            corners = obox_to_corners(obox).reshape((4, 3))
-            new_plane = Plane(corners, class_id, fit_rate)
-            plane_manager.add(new_plane)
+            # new_plane might be none
+            if new_plane:     
+                log("Detection {}: fitted plane with fit_rate={} (normalized={})".format(i, new_plane.fit_rate, new_plane.normalized_fit_rate))
+                if new_plane.normalized_fit_rate >= MIN_NORMALIZED_FIT_RATE:
+                    plane_manager.add(new_plane)
     
     # send_planes 
     plane_data = plane_manager.get_all_bytes()
@@ -229,12 +226,11 @@ def process_capture(img, camera_transform, pcd):
     icp_object_sender.send(icp_object_data)
 
 
-    # timing of the plane extraction pipeline
+    # timing the sense making pipeline
     end_time = time.time()
     elapsed_time = end_time - start_time
     log("Processed captured tripplet in {} seconds".format(elapsed_time))
-    log("_______________________________________________________________")
-    log("_______________________________________________________________")
+    log("======================================================")
 
 
 def yolo_predict(img):
@@ -316,17 +312,21 @@ def main():
 
 
     # subscribe to topics
-    rospy.init_node('semantic_inference', anonymous=True)
+    rospy.init_node('sense_making', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)
     rospy.Subscriber('/rtabmap/odom', Odometry, odom_callback)
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, image_callback)
 
     # set timer for capture callback 
-    rospy.Timer(rospy.Duration(FREQ_SEMANTIC_INFERENCE), capture_callback)
+    rospy.Timer(rospy.Duration(FREQ_SENSE_MAKING), capture_callback)
+    rospy.on_shutdown(shutdown)
     rospy.spin()
 
 
-
+def shutdown():
+    plane_sender.stop()
+    icp_object_sender.stop()
+    print("sense_making shutdown")
 
 
 
@@ -443,6 +443,7 @@ class Plane:
         self._corners = corners
         self._class_id = class_id    
         self._fit_rate = fit_rate
+        self.normalized_fit_rate = min(1, fit_rate/FIT_RATE_NORMALIZATION)
     
     
     def distance(self, other_plane):
@@ -607,8 +608,7 @@ class ICPObject:
 if __name__ == '__main__':
     try:
         main()
-    except rospy.ROSInterruptException:
-        plane_sender.stop()
-        icp_object_sender.stop()
+    finally:
+        shutdown()
 
 

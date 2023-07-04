@@ -14,6 +14,8 @@ from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
 from constants import *
+from utils import Msg
+
 fps_counter = 50
 
 
@@ -42,10 +44,6 @@ def setupCameraInfo():
     camera_info.P = list(np.hstack([np.array(CAMERA_K).reshape((3, 3)), np.zeros((3, 1))]).reshape(12).astype(np.float32))
     return camera_info
 
-class Msg():
-    def __init__(self, color, depth) -> None:
-        self.color = color
-        self.depth = depth
 
 
 def decode(msg_bytes):
@@ -69,7 +67,6 @@ def main():
     rospy.loginfo("[Camera publisher] Waiting for streamer connection")
     socket = setupSocket()
     conn, address = socket.accept()
-    rospy.loginfo("Streamer connected")
 
     start_time = time.time()
 
@@ -82,7 +79,7 @@ def main():
         data_size = conn.recv(4)
         size = struct.unpack('!I', data_size)[0]
         data = b''
-        while len(data) < size:
+        while len(data) < size and not rospy.is_shutdown():
             packet = conn.recv(size - len(data))
             if not packet:
                 break

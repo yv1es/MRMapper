@@ -5,7 +5,7 @@ import copy
 
 from constants import *
 from utils import *
-
+from sense_making import Plane, ICPObject
 
 """ 
 This file contains function operating on (Open3d) point clouds that are used mostly in the semantic inference stage. 
@@ -214,25 +214,27 @@ def iterative_icp(obj_pcd, scene_pcd, inital_T):
 
 
 
-def fit_plane(pcd):
+def fit_plane(pcd, class_id):
     """
     Fits a plane to the point cloud and returns the inlier points, oriented bounding box, and fit rate.
-    
+    Returns None when the cloud is too sparse
+
     Args:
         pcd (open3d.geometry.PointCloud): The point cloud.
 
     Returns:
-        tuple: A tuple containing the oriented bounding box, and the fit rate.
+        Plane: A new plane object.
     """
     _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
     inlier_cloud = pcd.select_by_index(inliers)
-    # inlier_cloud = keep_largest_cluster(inlier_cloud)
+    inlier_cloud = keep_largest_cluster(inlier_cloud)
     if (len(inlier_cloud.points) == 0):
-        return o3d.geometry.OrientedBoundingBox(), 0
+        return None
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
     fit_rate = len(inlier_cloud.points) / len (pcd.points)
-
-    return obox, fit_rate
+    corners = obox_to_corners(obox).reshape((4, 3))
+    new_plane = Plane(corners, class_id, fit_rate)
+    return new_plane
 
 
 

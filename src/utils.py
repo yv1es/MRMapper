@@ -128,3 +128,8 @@ def ros_pointcloud_to_o3d(pointcloud_msg):
     pointcloud_o3d.colors = o3d.utility.Vector3dVector(colors / 255.0)
 
     return pointcloud_o3d
+
+class Msg():
+    def __init__(self, color, depth) -> None:
+        self.color = color
+        self.depth = depth

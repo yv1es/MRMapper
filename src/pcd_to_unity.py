@@ -22,17 +22,20 @@ def main():
     sender_pcd = UnitySender(HOST, PORT_PCL, 'Pcd Sender')
     sender_pcd.start()
 
-    rospy.loginfo("Connected to unity")
     rospy.Subscriber("/rtabmap/cloud_map", PointCloud2, callback_cloud_map)
+    rospy.on_shutdown(shutdown)
     rospy.spin()
+    
 
-
+def shutdown():
+    sender_pcd.stop()
+    print("pcd_to_unity shutdown")
 
 if __name__ == '__main__':
     try:
         main()
-    except rospy.ROSInterruptException:
-        sender_pcd.stop()
+    finally:
+        shutdown()
 
 
 
