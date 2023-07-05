@@ -69,7 +69,6 @@ def main():
     rospy.loginfo("[Camera publisher] Waiting for streamer connection")
     socket = setupSocket()
     conn, address = socket.accept()
-    rospy.loginfo("Streamer connected")
 
     start_time = time.time()
 

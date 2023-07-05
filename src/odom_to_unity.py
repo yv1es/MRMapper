@@ -26,7 +26,6 @@ def main():
     sender_odom = UnitySender(HOST, PORT_ODOM, 'Odom Sender')
     sender_odom.start()
 
-    rospy.loginfo("Connection to unity established")
     rospy.Subscriber("/rtabmap/odom", Odometry, callback_odom)
     rospy.on_shutdown(shutdown)
     rospy.spin()
