@@ -24,7 +24,7 @@ PORT_PLANES = 5003
 PORT_OBJECTS = 5004
 
 
-FREQ_SEMANTIC_INFERENCE = 1  # how frequently the semantic inference is launched (in seconds)
+FREQ_SENSE_MAKING = 1  # how frequently the semantic inference is launched (in seconds)
 FRUSTUM_DEPTH = 8 # how deep the frustum from the camera reaches into the scene (in meters)
 
 # filtering 
@@ -36,8 +36,8 @@ DBSCAN_MIN_POINTS = 4
 # planes
 MIN_PLANE_DISTANCE = 30   # when a plane has a distance > MIN_PLANE_DIST to all other planes then it is added as a new plane
 PLANE_UPDATE_WEIGHT = 0.1      # update weigth a new detected plane(distance smaller than MIN_PLANE_DIST) has on the existing closest plane
-MIN_FIT_RATE = 0.08  # minimum fit rate a plane needs to have 
-FIT_RATE_NORMALIZATION = 0.05  # fit rates are mapped from [0, FIT_RATE_NORMALIZATION] to [0, 1] linearly, fit rates > FIT_RATE_NORMALIZATION are capped to 1 
+MIN_NORMALIZED_FIT_RATE = 0.8  # minimum fit rate a plane needs to have 
+FIT_RATE_NORMALIZATION = 0.06  # fit rates are mapped from [0, FIT_RATE_NORMALIZATION] to [0, 1] linearly, fit rates > FIT_RATE_NORMALIZATION are capped to 1 
 AREA_NORMALIZATION = 2  # areas are mapped from [0, AREA_NORMALIZATION] to [0, 1] linearly, areas > AREA_NORMALIZATION are capped to 1 
 
 # icp fitting
@@ -45,12 +45,11 @@ MIN_ICP_OBJ_DIST = 1   # when a icp_object has a distance > MIN_ICP_OBJ_DIST to 
 MAX_RMSE = 0.055   # maximum RMSE that is tolerated 
 ICP_OBJECT_UPDATE_WEIGHT = 0.2  # update weigth a new detection of the same object (distance smaller than MIN_ICP_OBJ_DIST) has on the existing object
 
-# class ids which are flat and hence MRMapper shoudl fit a plane
+# class ids which are flat and hence MRMapper should fit a plane
 FLAT_OBJECTS = {59, 60, 66, 73}
 
 # class ids for which MRMapper should fit a icp_object (currently only the office chair is supported)
 ICP_OBJECTS = {56}
-
 
 CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
 

@@ -28,15 +28,20 @@ def main():
 
     rospy.loginfo("Connection to unity established")
     rospy.Subscriber("/rtabmap/odom", Odometry, callback_odom)
-
+    rospy.on_shutdown(shutdown)
     rospy.spin()
+
+
+def shutdown():
+    sender_odom.stop()
+    print("sense_making shutdown")
 
 
 if __name__ == '__main__':
     try:
         main()
-    except rospy.ROSInterruptException:
-        sender_odom.stop()
+    finally:
+        shutdown()
 
 
 

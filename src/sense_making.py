@@ -90,8 +90,11 @@ def make_capture():
     log("Starting capture")
 
     capture = True
-    while cloud_map_msg is None or odom_msg is None or image_msg is None: 
-        continue # wait until triplet is complete
+    while cloud_map_msg is None or odom_msg is None or image_msg is None:
+        if rospy.is_shutdown():
+            return 
+        else:
+            continue # wait until triplet is complete
 
     # convert from ROS to open3d point cloud 
     pcd = ros_pointcloud_to_o3d(cloud_map_msg)
@@ -208,10 +211,11 @@ def process_capture(img, camera_transform, pcd):
             
             # plane segmantation
             obox, fit_rate = fit_plane(pcd_bbox)
-            
-            log("Detection {}: fitted plane with fit_rate={}".format(i, fit_rate))
-            if fit_rate < MIN_FIT_RATE: 
-                log("Detection {}: fit_rate was too low".format(i))
+            normalized_fit_rate = min(fit_rate / FIT_RATE_NORMALIZATION, 1) 
+
+            log("Detection {}: fitted plane with fit_rate={} normalized_fit_rate=".format(i, fit_rate, normalized_fit_rate))
+            if normalized_fit_rate < MIN_NORMALIZED_FIT_RATE: 
+                log("Detection {}: nomalized_fit_rate was too low".format(i))
                 continue
             
             log("Detection {}: Plane found".format(i))
@@ -316,17 +320,21 @@ def main():
 
 
     # subscribe to topics
-    rospy.init_node('semantic_inference', anonymous=True)
+    rospy.init_node('sense_making', anonymous=True)
     rospy.Subscriber('/rtabmap/cloud_map', PointCloud2, cloud_map_callback)
     rospy.Subscriber('/rtabmap/odom', Odometry, odom_callback)
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, image_callback)
 
     # set timer for capture callback 
-    rospy.Timer(rospy.Duration(FREQ_SEMANTIC_INFERENCE), capture_callback)
+    rospy.Timer(rospy.Duration(FREQ_SENSE_MAKING), capture_callback)
+    rospy.on_shutdown(shutdown)
     rospy.spin()
 
 
-
+def shutdown():
+    plane_sender.stop()
+    icp_object_sender.stop()
+    print("sense_making shutdown")
 
 
 
@@ -607,8 +615,7 @@ class ICPObject:
 if __name__ == '__main__':
     try:
         main()
-    except rospy.ROSInterruptException:
-        plane_sender.stop()
-        icp_object_sender.stop()
+    finally:
+        shutdown()
 
 

@@ -82,7 +82,7 @@ def main():
         data_size = conn.recv(4)
         size = struct.unpack('!I', data_size)[0]
         data = b''
-        while len(data) < size:
+        while len(data) < size and not rospy.is_shutdown():
             packet = conn.recv(size - len(data))
             if not packet:
                 break
