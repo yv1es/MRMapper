@@ -104,8 +104,8 @@ RUN cd ~/catkin_ws \
 # MRMapper
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/MRMapper.git \
-    && cd ~/catkin_ws/src/MRMapper \
-    && git checkout main
+    && cd ~/catkin_ws/src/MRMapper 
+    # && git checkout main
 
 
 # build ROS packages in workspace
