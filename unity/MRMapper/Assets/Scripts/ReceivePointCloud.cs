@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.XR;
 
 
@@ -65,6 +66,7 @@ public class ReceivePointCloud : RosReceiver
 
         // update mesh 
         mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; // to allow for more points
         mesh.SetVertices(points);
         mesh.SetColors(colors);
         mesh.SetIndices(Enumerable.Range(0, numPoints).ToArray(), MeshTopology.Points, 0);
