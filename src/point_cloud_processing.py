@@ -5,7 +5,7 @@ import copy
 
 from constants import *
 from utils import *
-from sense_making import Plane, ICPObject
+from detections import Plane, ICPObject
 
 """ 
 This file contains function operating on (Open3d) point clouds that are used mostly in the semantic inference stage. 
@@ -128,7 +128,7 @@ def image_points_to_direction(points, intrinsics):
 
 
 
-def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
+def icp_fit_object(obj_pcd, frustum_pcd, camera_pos, class_id):
     """
     Performs ICP registration to fit the object point cloud to the frustum point cloud.
     Tries out multiple inital transforms and chooses the best based on RMSE. 
@@ -139,7 +139,7 @@ def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
         camera_pos (ndarray): The camera position.
 
     Returns:
-        tuple: A tuple containing the transformation matrix and the RMSE value.
+        ICPObject: The newly fitted ICPObject
     """
     frustum_mean = np.mean(np.asarray(frustum_pcd.points), axis=0)
     initial_pos = (frustum_mean - camera_pos) * 0.5  
@@ -165,7 +165,8 @@ def icp_fit_object(obj_pcd, frustum_pcd, camera_pos):
             best_rmse = rmse
             best_t = t
     
-    return best_t, best_rmse
+    new_icp_object = ICPObject(best_t, class_id, rmse)
+    return new_icp_object
 
 
 def frustum_hidden_point_removal(pcd, camera_pos):
