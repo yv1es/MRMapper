@@ -12,6 +12,7 @@ import time
 from scipy.spatial.transform import Rotation
 
 from unity_sender import UnitySender 
+from detections import ObjectManager, ICPObject
 from point_cloud_processing import *
 from utils import *
 from constants import *
@@ -159,7 +160,7 @@ def process_capture(img, camera_transform, pcd):
         if int(class_id) not in ICP_OBJECTS | FLAT_OBJECTS: 
             continue
 
-        log("---------")
+        log("--------------------------------------")
         log("Detection {}: Starting processing".format(i))
 
         # only proceed when the bounding box has MIN_BOUNDING_BOX_MARGIN pixels distance from the frame borders
@@ -186,36 +187,26 @@ def process_capture(img, camera_transform, pcd):
             log("Detection {}: not enough visible points in frustum point cloud".format(i))
             continue 
     
+        
         # compute icp transform for specific objects
         if int(class_id) in ICP_OBJECTS: 
             log("Detection {}: Starting icp fitting".format(i))
-
-            # iterative icp 
             source_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
-            icp_transform, rmse = icp_fit_object(source_cloud, pcd_bbox, camera_pos)
+            new_icp_object = icp_fit_object(source_cloud, pcd_bbox, camera_pos, class_id)
+            log("Detection {}: fitted icp object with rmse={} quality={}".format(i, new_icp_object.rmse, new_icp_object.quality))
+            icp_object_manager.add(new_icp_object)
             
-            log("Detection {}: found ICP transform with RMSE={}".format(i, rmse))
-            # filter for low rmse 
-            if rmse > MAX_RMSE: 
-                log("Detection {}: the RMSE was too high".format(i))
-                continue
-            
-            log("Detection {}: ICP object found".format(i))
-            # create new object and add it to manager
-            new_object = ICPObject(icp_transform, class_id, rmse)
-            icp_object_manager.add(new_object)
-            
+        
         # fit a plane for flat objects
         if int(class_id) in FLAT_OBJECTS:
             log("Detection {}: Starting plane fitting".format(i))
-            # plane segmantation
-            new_plane = fit_plane(pcd_bbox)
-            
+            # plane fitting
+            new_plane = fit_plane(pcd_bbox, class_id)
             # new_plane might be none
             if new_plane:     
-                log("Detection {}: fitted plane with fit_rate={} (normalized={})".format(i, new_plane.fit_rate, new_plane.normalized_fit_rate))
-                if new_plane.normalized_fit_rate >= MIN_NORMALIZED_FIT_RATE:
-                    plane_manager.add(new_plane)
+                log("Detection {}: fitted plane with fit_rate={} (quality={})".format(i, new_plane.fit_rate, new_plane.quality))
+                plane_manager.add(new_plane)
+                    
     
     # send_planes 
     plane_data = plane_manager.get_all_bytes()
@@ -230,7 +221,7 @@ def process_capture(img, camera_transform, pcd):
     end_time = time.time()
     elapsed_time = end_time - start_time
     log("Processed captured tripplet in {} seconds".format(elapsed_time))
-    log("======================================================")
+    log("==================================================================")
 
 
 def yolo_predict(img):
@@ -300,8 +291,8 @@ def log(s : str) -> None:
 def main():
     # setup plane and object manager 
     global plane_manager, icp_object_manager 
-    plane_manager = ObjectManager(MIN_PLANE_DISTANCE)
-    icp_object_manager = ObjectManager(MIN_ICP_OBJ_DIST)
+    plane_manager = ObjectManager(MIN_PLANE_DISTANCE. log)
+    icp_object_manager = ObjectManager(MIN_ICP_OBJ_DIST, log)
 
     # setup unity senders
     global plane_sender, icp_object_sender
@@ -328,280 +319,6 @@ def shutdown():
     icp_object_sender.stop()
     print("sense_making shutdown")
 
-
-
-class ObjectManager: 
-    """
-    A class for managing objects. The managed objects need to implement a distance, update and tobytes method. 
-
-    Attributes:
-        _min_dist (float): The minimum distance threshold for considering an object as new. 
-        _objects (list): A list of objects.
-
-    Methods:
-        __init__(self, min_dist): Initializes the ObjectManager instance.
-        add(self, object): Adds an object to the object manager.
-        get_all(self): Returns all objects in the object manager.
-        get_all_bytes(self): Returns all objects serialized as a byte string.
-        _find_closest(self, object): Finds the closest object in the object manager to the given object.
-    """
-
-    def __init__(self, min_dist) -> None:
-        self._min_dist = min_dist
-        self._objects = []
-
-    def add(self, object): 
-        """
-        Adds an object to the object manager.
-        If a similar object is found within the minimum distance threshold, it updates the closest object.
-        Otherwise, it adds the new object to the object manager.
-
-        Args:
-            object: The object to be added.
-        
-        Returns:
-            None
-        """
-        closest, min_dist = self._find_closest(object)
-
-        log("min. distance to closest similar object={}".format(min_dist))
-        # update if the closest object is closer than the min_dist threshold
-        if min_dist < self._min_dist: 
-            log("Updating closest object")
-            closest.update(object)
-        else: 
-            log("Adding new object")
-            self._objects.append(object)
-
-    def get_all(self): 
-        return self._objects
-    
-    def get_all_bytes(self):
-        """
-        Returns all objects serialized as one byte string.
-
-        Returns:
-            bytes: Objects represented in bytes format.
-        """
-        b = b""
-        for o in self._objects: 
-            b += o.tobytes()
-        return b 
-     
-    def _find_closest(self, object): 
-        """
-        Finds the closest object in the object manager to the given object.
-
-        Args:
-            object: The object for which to find the closest object.
-
-        Returns:
-            tuple: A tuple containing the closest object and the distance to it.
-        """
-        min_dist = INF
-        closest = None
-        for c in self._objects: 
-            dist = object.distance(c)
-            if dist < min_dist: 
-                closest = c 
-                min_dist = dist 
-        return closest, min_dist
-
-
-class Plane: 
-    """
-    A class representing a plane.
-
-    Attributes:
-        _corners (ndarray): The corners of the plane.
-        _class_id (int): The class ID of the plane.
-        _fit_rate (float): The fit rate of the plane.
-
-    Methods:
-        __init__(self, corners, class_id, fit_rate): Initializes the Plane instance.
-        distance(self, other_plane): Calculates the distance between the plane and another plane.
-        update(self, p): Updates the plane with another plane's information.
-        area(self): Calculates the area of the plane.
-        get_corners(self): Returns the corners of the plane.
-        get_class_id(self): Returns the class ID of the plane.
-        tobytes(self): Converts the plane object to bytes.
-    """
-
-
-    def __init__(self, corners, class_id, fit_rate): 
-        """
-        Initializes the Plane instance.
-
-        Args:
-            corners (ndarray): The corners of the plane.
-            class_id (int): The class ID of the plane.
-            fit_rate (float): The fit rate of the plane.
-        
-        Returns:
-            None
-        """
-        self._corners = corners
-        self._class_id = class_id    
-        self._fit_rate = fit_rate
-        self.normalized_fit_rate = min(1, fit_rate/FIT_RATE_NORMALIZATION)
-    
-    
-    def distance(self, other_plane):
-        """
-        Calculates the distance between the plane and another plane.
-
-        If the class IDs of the planes don't match, returns infinity (INF).
-        Otherwise, calculates the distance based on the area factor and squared difference of corners.
-
-        Args:
-            other_plane (Plane): The other plane to calculate the distance from.
-
-        Returns:
-            float: The distance between the planes.
-        """
-        if self._class_id != other_plane.get_class_id():
-            return INF 
-        area_factor = min(self.area() / AREA_NORMALIZATION, 1)
-        sum_squared_diff = np.sum((self._corners - other_plane.get_corners()) ** 2)
-        return sum_squared_diff / area_factor
-
-    def update(self, p): 
-        """
-        Updates the plane with another plane's information.
-
-        Calculates the update weight based on the area factor and fit rate of the plane.
-        Updates the corners of the plane using the weighted average.
-
-        Args:
-            p (Plane): The plane to update from.
-
-        Retruns:
-            None
-        """
-        area_factor = min(self.area() / AREA_NORMALIZATION, 1)
-        # k = PLANE_UPDATE_WEIGHT * area_factor * self._fit_rate ** 2
-        k = PLANE_UPDATE_WEIGHT
-        log("Plane update weight={}".format(k))
-        self._corners = self._corners * (1-k) + p.get_corners() * k
-
-    def area(self):
-        """
-        Calculates the area of the plane.
-
-        Returns:
-            float: The area of the plane.
-        """
-        A = self._corners[1,:] - self._corners[0,:]
-        B = self._corners[2,:] - self._corners[0,:]
-        area = np.linalg.norm(np.cross(A, B))
-        return area
-    
-    def get_corners(self):
-        return self._corners
-
-    def get_class_id(self): 
-        return self._class_id
-
-    def tobytes(self): 
-        """
-        Converts the plane object to bytes.
-
-        Returns:
-            bytes: The plane represented in bytes.
-        """
-        b = self._corners.astype(np.float32).tobytes() + \
-            np.array(self._class_id).astype(np.float32).tobytes()
-        return b
-
-
-class ICPObject:
-    """
-    A class representing an objec found by the Iterative Closest Point (ICP) algorithm.
-
-    Attributes:
-        _transform (ndarray): The transformation matrix of the object.
-        _class_id (int): The class ID of the object.
-        _rmse (float): The root mean square error (RMSE) from the ICP fit of the object.
-
-    Methods:
-        __init__(self, transform, class_id, rmse): Initializes the ICPObject instance.
-        distance(self, o): Calculates the distance between the object and another object.
-        update(self, o): Updates the object with another object's information.
-        get_transform(self): Returns the transformation matrix of the object.
-        get_class_id(self): Returns the class ID of the object.
-        tobytes(self): Converts the object to bytes.
-    """
-
-
-    def __init__(self, transform, class_id, rmse):
-        """
-        Initializes the ICPObject instance.
-
-        Args:
-            transform (ndarray): The transformation matrix of the object.
-            class_id (int): The class ID of the object.
-            rmse (float): The root mean square error (RMSE) of the object.
-        """
-        self._transform = transform 
-        self._class_id = class_id 
-        self._rmse = rmse
-
-    def distance(self, new_object): 
-        """
-        Calculates the distance between the object and another object.
-
-        If the class IDs of the objects don't match, returns infinity (INF).
-        Otherwise, calculates the distance based on the squared difference of transforms.
-
-        Args:
-            new_object (ICPObject): The other object to calculate the distance from.
-
-        Returns:
-            float: The distance between the objects.
-        """
-        if self._class_id != new_object.get_class_id():
-            return INF 
-        sum_squared_diff = np.sum((self._transform - new_object.get_transform()) ** 2)
-        return sum_squared_diff
-
-    def update(self, new_object): 
-        """
-        Updates the object with another object's information.
-
-        Applies a weighted average update to the transformation matrix of the object.
-
-        Args:
-            new_object (ICPObject): The object to update from.
-        """
-        k = ICP_OBJECT_UPDATE_WEIGHT
-        self._transform = self._transform * (1-k) + new_object.get_transform() * k 
-    
-    def get_transform(self): 
-        return self._transform
-
-    def get_class_id(self): 
-        return self._class_id
-
-    def tobytes(self): 
-        """
-        Converts the object to bytes.
-
-        Computes the translation and quaternion from the transformation matrix,
-        and converts them along with the class ID to bytes.
-
-        Returns:
-            bytes: The object represented in bytes.
-        """
-        translation = self._transform[:3, 3]
-        rotation_matrix = self._transform[:3, :3]
-        rotation = Rotation.from_matrix(rotation_matrix)
-        quaternion = rotation.as_quat()
-        quaternion = quaternion / np.linalg.norm(quaternion)
-
-        b = translation.astype(np.float32).tobytes() + \
-            quaternion.astype(np.float32).tobytes() + \
-            np.array([self._class_id]).astype(np.float32).tobytes()
-        return b
 
 
 
