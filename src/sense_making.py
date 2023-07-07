@@ -159,7 +159,7 @@ def process_capture(img, camera_transform, pcd):
         if int(class_id) not in ICP_OBJECTS | FLAT_OBJECTS: 
             continue
 
-        log("------------------------------------------")
+        log("---------")
         log("Detection {}: Starting processing".format(i))
 
         # only proceed when the bounding box has MIN_BOUNDING_BOX_MARGIN pixels distance from the frame borders
@@ -208,21 +208,14 @@ def process_capture(img, camera_transform, pcd):
         # fit a plane for flat objects
         if int(class_id) in FLAT_OBJECTS:
             log("Detection {}: Starting plane fitting".format(i))
-            
             # plane segmantation
-            obox, fit_rate = fit_plane(pcd_bbox)
-            normalized_fit_rate = min(fit_rate / FIT_RATE_NORMALIZATION, 1) 
-
-            log("Detection {}: fitted plane with fit_rate={} normalized_fit_rate=".format(i, fit_rate, normalized_fit_rate))
-            if normalized_fit_rate < MIN_NORMALIZED_FIT_RATE: 
-                log("Detection {}: nomalized_fit_rate was too low".format(i))
-                continue
+            new_plane = fit_plane(pcd_bbox)
             
-            log("Detection {}: Plane found".format(i))
-            # compute the 4 corner points from planes obox 
-            corners = obox_to_corners(obox).reshape((4, 3))
-            new_plane = Plane(corners, class_id, fit_rate)
-            plane_manager.add(new_plane)
+            # new_plane might be none
+            if new_plane:     
+                log("Detection {}: fitted plane with fit_rate={} (normalized={})".format(i, new_plane.fit_rate, new_plane.normalized_fit_rate))
+                if new_plane.normalized_fit_rate >= MIN_NORMALIZED_FIT_RATE:
+                    plane_manager.add(new_plane)
     
     # send_planes 
     plane_data = plane_manager.get_all_bytes()
@@ -233,12 +226,11 @@ def process_capture(img, camera_transform, pcd):
     icp_object_sender.send(icp_object_data)
 
 
-    # timing of the plane extraction pipeline
+    # timing the sense making pipeline
     end_time = time.time()
     elapsed_time = end_time - start_time
     log("Processed captured tripplet in {} seconds".format(elapsed_time))
-    log("_______________________________________________________________")
-    log("_______________________________________________________________")
+    log("======================================================")
 
 
 def yolo_predict(img):
@@ -451,6 +443,7 @@ class Plane:
         self._corners = corners
         self._class_id = class_id    
         self._fit_rate = fit_rate
+        self.normalized_fit_rate = min(1, fit_rate/FIT_RATE_NORMALIZATION)
     
     
     def distance(self, other_plane):

@@ -36,15 +36,17 @@ def pose_esitmation(frame, aruco_dict_type=cv2.aruco.DICT_5X5_50, matrix_coeffic
     if len(corners) > 0:
         for i in range(0, len(ids)):
             # Estimate pose of each marker and return the values rvec and tvec---(different from those of camera coefficients)
-            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.02, matrix_coefficients, distortion_coefficients)
+            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.05, matrix_coefficients, distortion_coefficients)
             
             # Draw a square around the markers
             cv2.aruco.drawDetectedMarkers(frame, corners) 
 
             # Draw Axis
-            cv2.aruco.drawAxis(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.02)  
-
-            print("ID: {}    POS: {}".format(ids[i], tvec))
+            cv2.aruco.drawAxis(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.05)  
+            
+            unity_tvec = tvec[0][0].copy()
+            unity_tvec[1] = -unity_tvec[1]
+            print("ID: {}    POS: {}".format(ids[i], unity_tvec))
 
     return frame
 

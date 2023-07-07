@@ -36,8 +36,8 @@ DBSCAN_MIN_POINTS = 4
 # planes
 MIN_PLANE_DISTANCE = 30   # when a plane has a distance > MIN_PLANE_DIST to all other planes then it is added as a new plane
 PLANE_UPDATE_WEIGHT = 0.1      # update weigth a new detected plane(distance smaller than MIN_PLANE_DIST) has on the existing closest plane
-MIN_NORMALIZED_FIT_RATE = 0.8  # minimum fit rate a plane needs to have 
-FIT_RATE_NORMALIZATION = 0.06  # fit rates are mapped from [0, FIT_RATE_NORMALIZATION] to [0, 1] linearly, fit rates > FIT_RATE_NORMALIZATION are capped to 1 
+MIN_NORMALIZED_FIT_RATE = 0.5  # minimum fit rate a plane needs to have 
+FIT_RATE_NORMALIZATION = 0.05  # fit rates are mapped from [0, FIT_RATE_NORMALIZATION] to [0, 1] linearly, fit rates > FIT_RATE_NORMALIZATION are capped to 1 
 AREA_NORMALIZATION = 2  # areas are mapped from [0, AREA_NORMALIZATION] to [0, 1] linearly, areas > AREA_NORMALIZATION are capped to 1 
 
 # icp fitting
