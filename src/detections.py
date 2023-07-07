@@ -2,7 +2,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from point_cloud_processing import *
 from utils import *
 from constants import *
 
@@ -164,7 +163,7 @@ class Plane:
         area_factor = min(self.area() / AREA_NORMALIZATION, 1)
         # k = PLANE_UPDATE_WEIGHT * area_factor * self._fit_rate ** 2
         k = PLANE_UPDATE_WEIGHT
-        log("Plane update weight={}".format(k))
+        # self.log("Plane update weight={}".format(k))
         self._corners = self._corners * (1-k) + p.get_corners() * k
 
     def area(self):

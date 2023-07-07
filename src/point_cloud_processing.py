@@ -228,7 +228,7 @@ def fit_plane(pcd, class_id):
     """
     _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
     inlier_cloud = pcd.select_by_index(inliers)
-    inlier_cloud = keep_largest_cluster(inlier_cloud)
+    # inlier_cloud = keep_largest_cluster(inlier_cloud)
     if (len(inlier_cloud.points) == 0):
         return None
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
