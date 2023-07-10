@@ -15,7 +15,7 @@ def callback_cloud_map(cloud_map):
     sender_pcd.send(data)
     
 def main():    
-    rospy.init_node('unity_subsciber', anonymous=True)
+    rospy.init_node('pcd_to_unity', anonymous=True)
 
     # Create UnitySender for point cloud data
     global sender_pcd, sender_odom

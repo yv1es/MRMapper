@@ -291,7 +291,7 @@ def log(s : str) -> None:
 def main():
     # setup plane and object manager 
     global plane_manager, icp_object_manager 
-    plane_manager = ObjectManager(MIN_PLANE_DISTANCE. log)
+    plane_manager = ObjectManager(MIN_PLANE_DISTANCE, log)
     icp_object_manager = ObjectManager(MIN_ICP_OBJ_DIST, log)
 
     # setup unity senders
