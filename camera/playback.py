@@ -3,22 +3,18 @@ import cv2
 import time
 import argparse
 
-
 from utils import VideoReader, sendImages
 from camera_constants import *
 
-# Constants
-HOST = s.gethostname() 
-PORT = 5000 
 
 """  
-This takes a folder containing a depth and a color video. It streams the recorded video as if a camera was connected. 
+This script streams a recorded recorded video as if a camera was connected. 
 """
 
 
 def setupSocket():
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
-    sock.connect((HOST, PORT))  
+    sock.connect((HOST, PORT_CAMERA))  
     return sock
 
  

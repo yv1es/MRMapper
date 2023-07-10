@@ -1,3 +1,3 @@
 @echo off 
-echo Running container
+echo Building mrmapper image
 docker build -t mrmapper .

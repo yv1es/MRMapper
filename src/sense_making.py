@@ -47,7 +47,7 @@ image_msg = None
 def capture_callback(event):
     """
     This callback function in periodically exectued and its purpose it 
-    to periodically start the semantic inference pipeline.
+    to periodically start the sense making pipeline.
     Adjust the frequency of its execution with FREQ_PLANE_EXTRACTION constant. 
     It guarantees that no captures run concurrently with locking. 
 
@@ -183,7 +183,7 @@ def process_capture(img, camera_transform, pcd):
         pcd_bbox = keep_largest_cluster(pcd_bbox)
 
         # only proceed when the cut out point cloud has enough points
-        if  len(pcd_bbox.points) < 10:
+        if  len(pcd_bbox.points) < 30:
             log("Detection {}: not enough visible points in frustum point cloud".format(i))
             continue 
     
@@ -193,7 +193,7 @@ def process_capture(img, camera_transform, pcd):
             log("Detection {}: Starting icp fitting".format(i))
             source_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
             new_icp_object = icp_fit_object(source_cloud, pcd_bbox, camera_pos, class_id)
-            log("Detection {}: fitted icp object with rmse={} quality={}".format(i, new_icp_object.rmse, new_icp_object.quality))
+            log("Detection {}: fitted icp object with rmse={} quality={}".format(i, new_icp_object._rmse, new_icp_object.quality))
             icp_object_manager.add(new_icp_object)
             
         
@@ -204,7 +204,7 @@ def process_capture(img, camera_transform, pcd):
             new_plane = fit_plane(pcd_bbox, class_id)
             # new_plane might be none
             if new_plane:     
-                log("Detection {}: fitted plane with fit_rate={} (quality={})".format(i, new_plane.fit_rate, new_plane.quality))
+                log("Detection {}: fitted plane with fit_rate={} (quality={})".format(i, new_plane._fit_rate, new_plane.quality))
                 plane_manager.add(new_plane)
                     
     
@@ -285,13 +285,13 @@ def print_yolo_prediction(class_ids, confidences, boxes):
 
 
 def log(s : str) -> None:
-    rospy.loginfo("[Semantic Inference] " + s)
+    rospy.loginfo("[Sense making] " + s)
 
 
 def main():
     # setup plane and object manager 
     global plane_manager, icp_object_manager 
-    plane_manager = ObjectManager(MIN_PLANE_DISTANCE. log)
+    plane_manager = ObjectManager(MIN_PLANE_DISTANCE, log)
     icp_object_manager = ObjectManager(MIN_ICP_OBJ_DIST, log)
 
     # setup unity senders

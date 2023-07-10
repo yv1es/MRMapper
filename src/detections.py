@@ -2,9 +2,11 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+import constants
 from utils import *
-from constants import *
 
+import importlib
+importlib.reload(constants)
 
 class ObjectManager: 
     """

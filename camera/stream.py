@@ -1,14 +1,10 @@
 import pyrealsense2 as rs
-import socket as s
 import numpy as np 
 import time
 
 from camera_constants import * 
-from utils import setupRealsense, sendFrames
+from utils import setupRealsense, sendImages
 
-# Constants
-HOST = s.gethostname() 
-PORT = 5000 
 
 """  
 This script starts a connected Intel RealSense camera and streams the RGBD camera feed into the docker container. 
@@ -17,7 +13,7 @@ The camera_publisher ROS node in the container receives the RGBD stram and publi
 
 def setupSocket():
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
-    sock.connect((HOST, PORT))  
+    sock.connect((HOST, PORT_CAMERA))  
     return sock
 
 
@@ -50,7 +46,7 @@ def main():
                 # encode frames into one numpy array 
                 color_image = np.asanyarray(color_frame.get_data())
                 depth_image = np.asanyarray(depth_frame.get_data())
-                sendFrames(color_image, depth_image)
+                sendImages(color_image, depth_image, socket)
                 
 
         except ConnectionResetError as _:

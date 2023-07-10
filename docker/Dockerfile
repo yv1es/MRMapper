@@ -31,6 +31,10 @@ RUN apt update \
     python3-setuptools \
     build-essential 
 
+
+
+# pip install numpy==1.23.5
+# pip install mxnet -f https://dist.mxnet.io/python/cpu
 RUN pip3 install pandas matplotlib opencv-contrib-python cvbridge3 mxnet gluoncv numpy==1.23.1
 
 
@@ -51,7 +55,7 @@ RUN cd ~/Open3D \
         -D BUILD_EXAMPLES=OFF ..
 
 RUN cd ~/Open3D/build \
-    && make -j$(nproc) 
+    && make -j4
 
 RUN cd ~/Open3D/build \
     && make install \
@@ -111,7 +115,7 @@ RUN cd ~/catkin_ws/src \
 # build ROS packages in workspace
 RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
-    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j10 \
+    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j4 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
 
 

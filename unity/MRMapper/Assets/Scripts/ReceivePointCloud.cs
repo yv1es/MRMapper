@@ -16,21 +16,22 @@ using UnityEngine.XR;
 public class ReceivePointCloud : RosReceiver
 {
 
-    Mesh mesh;
-    MeshFilter meshFilter;
-    MeshRenderer meshRenderer;
-    public float pointSize = 1f;
-
-
     int port = 5001;
     string log_tag = "Pcd Receiver";
+    
+    public float pointSize = 1f;
+    GameObject pointCloud; 
 
 
     public void Start()
     {
-        // setup point cloud mesh renderer 
-        meshFilter = gameObject.AddComponent<MeshFilter>();
-        meshRenderer = gameObject.AddComponent<MeshRenderer>();
+        // setup point cloud game object 
+        pointCloud = new GameObject("Point Cloud");
+        pointCloud.transform.SetParent(transform);
+
+        // setup mesh filter and renderer
+        MeshFilter meshFilter = pointCloud.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = pointCloud.AddComponent<MeshRenderer>();
         meshRenderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
         meshRenderer.material.SetColor("_Color", Color.white);
         meshRenderer.material.SetFloat("_PointSize", pointSize);
@@ -39,39 +40,36 @@ public class ReceivePointCloud : RosReceiver
         Setup(port, log_tag, ProcessReceivedBytes);
     }
 
+
     private void ProcessReceivedBytes(byte[] data)
     {
-        RenderPointCloud(data);
-    }
-
-
-    void RenderPointCloud(byte[] pointCloudData)
-    {
+        // deserialize points and mesh 
         List<Vector3> points = new List<Vector3>();
         List<Color> colors = new List<Color>();
-        int numPoints = pointCloudData.Length / 32;
-
+        int numPoints = data.Length / 32;
         for (int i = 0; i < numPoints; i++)
         {
             int offset = i * 32;
             float[] v = new float[3];
-            v[0] = BitConverter.ToSingle(pointCloudData, offset);
-            v[1] = BitConverter.ToSingle(pointCloudData, offset + 4);
-            v[2] = BitConverter.ToSingle(pointCloudData, offset + 8);
+            v[0] = BitConverter.ToSingle(data, offset);
+            v[1] = BitConverter.ToSingle(data, offset + 4);
+            v[2] = BitConverter.ToSingle(data, offset + 8);
             points.Add(RtabVecToUnity(v));
 
-            Color color = new Color(pointCloudData[offset + 18] / 255f, pointCloudData[offset + 17] / 255f, pointCloudData[offset + 16] / 255f);
+            Color color = new Color(data[offset + 18] / 255f, data[offset + 17] / 255f, data[offset + 16] / 255f);
             colors.Add(color);
         }
 
+
         // update mesh 
-        mesh = new Mesh();
+        Mesh mesh = pointCloud.GetComponent<MeshFilter>().mesh;
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; // to allow for more points
         mesh.SetVertices(points);
         mesh.SetColors(colors);
         mesh.SetIndices(Enumerable.Range(0, numPoints).ToArray(), MeshTopology.Points, 0);
-        meshFilter.mesh = mesh;
     }
+
+
 }
 
 

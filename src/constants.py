@@ -49,11 +49,11 @@ RMSE_NORMALIZATION = 0.099  # RMSE are mapped from [0, RMSE_NORMALIZATION] to [0
 
 
 # minimum quality for objects
-MIN_QUALITY = 0.5
+MIN_QUALITY = 0.25
 
 
 # class ids which are flat and hence MRMapper should fit a plane
-FLAT_OBJECTS = {59, 60, 66, 73}
+FLAT_OBJECTS = {59, 60, 66, 67, 73}
 
 
 # class ids for which MRMapper should fit a icp_object (currently only the office chair is supported)
@@ -61,7 +61,7 @@ ICP_OBJECTS = {56}
 
 CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
 
-# map from class_id (implicit) to class label
+# map from class_id to class label
 
 
 
