@@ -25,7 +25,8 @@ public class RosReceiver : MonoBehaviour
     {
         // callback for receiver
         Action<byte[]> callback =
-            (data) => {
+            (data) =>
+            {
                 runOnMainThread.Enqueue(() => { action(data); });
             };
 
@@ -56,12 +57,12 @@ public class RosReceiver : MonoBehaviour
     public Vector3 RtabVecToUnity(float[] pos)
     {
         Quaternion q = Quaternion.Euler(90, 90, 180);
-        
-        Vector3 vec = new Vector3(); 
+
+        Vector3 vec = new Vector3();
         vec.x = pos[0];
         vec.y = pos[1];
-        vec.z = -pos[2];    
-        return q * vec; 
+        vec.z = -pos[2];
+        return q * vec;
     }
 
     public Quaternion RtabQuatToUnity(float[] quat)
@@ -73,85 +74,86 @@ public class RosReceiver : MonoBehaviour
         q.w = quat[3];
         return q;
     }
-}
 
-
-
-
-class Receiver
-{
-    private readonly Thread receiverThread;
-    private bool running;
-
-    private int port;
-    private string ip;
-    private string tag;
-
-    public Receiver(string ip, int port, string tag)
+    private class Receiver
     {
-        this.port = port;
-        this.ip = ip;
-        this.tag = tag;
+        private readonly Thread receiverThread;
+        private bool running;
 
-        receiverThread = new Thread(ReceiverThread);
-        receiverThread.IsBackground = true;
-    }
+        private int port;
+        private string ip;
+        private string tag;
 
-    private void ReceiverThread(object callback)
-    {
-        while (running)
+        public Receiver(string ip, int port, string tag)
         {
-            using (var client = new TcpClient(ip, port))
+            this.port = port;
+            this.ip = ip;
+            this.tag = tag;
+
+            receiverThread = new Thread(ReceiverThread);
+            receiverThread.IsBackground = true;
+        }
+
+        private void ReceiverThread(object callback)
+        {
+            while (running)
             {
-                NetworkStream stream = client.GetStream();
-
-                byte[] headerBuffer = new byte[4];
-                while (running)
+                using (var client = new TcpClient(ip, port))
                 {
+                    NetworkStream stream = client.GetStream();
 
-                    // Read the header from the stream
-                    int bytesRead = stream.Read(headerBuffer, 0, 4);
-                    if (bytesRead < 4) break;
-
-                    // Extract the length of the following data from the header
-                    int dataLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(headerBuffer, 0));
-
-                    // Read the data from the stream
-                    byte[] dataBuffer = new byte[dataLength];
-                    int totalBytesRead = 0;
-                    while (totalBytesRead < dataLength)
+                    byte[] headerBuffer = new byte[4];
+                    while (running)
                     {
-                        bytesRead = stream.Read(dataBuffer, totalBytesRead, dataLength - totalBytesRead);
-                        if (bytesRead == 0) break;
-                        totalBytesRead += bytesRead;
-                    }
 
-                    if (totalBytesRead == dataLength)
-                    {
-                        ((Action<byte[]>)callback)(dataBuffer);
-                    }
+                        // Read the header from the stream
+                        int bytesRead = stream.Read(headerBuffer, 0, 4);
+                        if (bytesRead < 4) break;
 
+                        // Extract the length of the following data from the header
+                        int dataLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(headerBuffer, 0));
+
+                        // Read the data from the stream
+                        byte[] dataBuffer = new byte[dataLength];
+                        int totalBytesRead = 0;
+                        while (totalBytesRead < dataLength)
+                        {
+                            bytesRead = stream.Read(dataBuffer, totalBytesRead, dataLength - totalBytesRead);
+                            if (bytesRead == 0) break;
+                            totalBytesRead += bytesRead;
+                        }
+
+                        if (totalBytesRead == dataLength)
+                        {
+                            ((Action<byte[]>)callback)(dataBuffer);
+                        }
+
+                    }
                 }
+                Thread.Sleep(1000);
+                log("Attempting to connect to MRMapper");
             }
-            Thread.Sleep(1000);
-            log("Attempting to connect to MRMapper");
+        }
+
+        private void log(string message)
+        {
+            Debug.Log("[" + tag + "] " + message);
+        }
+
+        public void Start(Action<byte[]> callback)
+        {
+            running = true;
+            receiverThread.Start(callback);
+        }
+
+        public void Stop()
+        {
+            running = false;
+            receiverThread.Abort();
         }
     }
-
-    private void log(string message)
-    {
-        Debug.Log("[" + tag + "] " + message);
-    }
-
-    public void Start(Action<byte[]> callback)
-    {
-        running = true;
-        receiverThread.Start(callback);
-    }
-
-    public void Stop()
-    {
-        running = false;
-        receiverThread.Abort();
-    }
 }
+
+
+
+

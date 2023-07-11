@@ -20,11 +20,9 @@ public class ReceiveOdom : RosReceiver
     int port = 5002;
     string log_tag = "Odom Receiver";
 
-    GameObject xrOrigin; 
 
     public void Start() {
         Setup(port, log_tag, ProcessReceivedBytes);
-        xrOrigin = GameObject.Find("XR Origin");
     }
 
     private void ProcessReceivedBytes(byte[] data)
@@ -42,51 +40,16 @@ public class ReceiveOdom : RosReceiver
         q[3] = BitConverter.ToSingle(data, 24);
         Quaternion cameraRot = RtabQuatToUnity(q);
 
-        // update camera transform 
-        //if (pos != Vector3.zero)
-        //{
-        //    transform.position = pos;
-        //    transform.rotation = rot;
-        //}
-
-       
-
-        Transform childTransform = this.transform; 
-        Vector3 globalPosition = childTransform.TransformPoint(Vector3.zero);
-        Quaternion globalRotation = childTransform.rotation;
-
-        Vector3 oculusPos = globalPosition;
-        Quaternion oculusRot = globalRotation;
-
-        Vector3 diffPos = cameraPos - oculusPos;
-        Quaternion diffRot = cameraRot * Quaternion.Inverse(oculusRot);
-
-        // translation and rotation threshold 
-        float tThreshold = 0.1f;
-        float rThreshold = 3f; 
-
-        if (Vec3Max(diffPos) > tThreshold || Vec3Max(diffRot.eulerAngles) > rThreshold + 5000)
+        //update camera transform
+        if (cameraPos != Vector3.zero)
         {
-            //xrOrigin.transform.position = diffPos;
-            //xrOrigin.transform.rotation = diffRot;
-            //Debug.Log("Recentered Oculus"); 
+            transform.position = cameraPos;
+            transform.rotation = cameraRot;
         }
 
-        Debug.Log("Position diff:" + diffPos);
-        Debug.Log("Camera pos:" + cameraPos);
-        //Debug.Log("Rotation diff:" + diffRot.eulerAngles);
+
 
     }
-
-    private float Vec3Max(Vector3 v)
-    {
-        return Mathf.Max(MathF.Max(v.x, v.y), v.z); 
-    }
-
-
-
-
-
 
 }
 

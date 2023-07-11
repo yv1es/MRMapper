@@ -25,11 +25,9 @@ public class ReceiveObjects : RosReceiver
 
     public void Start()
     {
+        // load chair mesh 
         GameObject meshObject = Resources.Load<GameObject>("56");
         chairMesh = meshObject.transform.GetChild(0).GetComponent<MeshFilter>().sharedMesh;
-           
-
-
         if (!(chairMesh != null && chairMesh.vertexCount > 0 && chairMesh.triangles.Length > 0))
         {
             Debug.LogWarning("Invalid chairMesh. Please make sure it contains valid vertex and triangle data.");
@@ -40,22 +38,11 @@ public class ReceiveObjects : RosReceiver
 
     private void ProcessReceivedBytes(byte[] data)
     {
-
-        // remove previously rendered objects
-        while (rendered_icp_objects.Count > 0)
-        {
-            GameObject g = rendered_icp_objects[0];
-            rendered_icp_objects.Remove(g);
-            Destroy(g);
-        }
-
-
-        int numObjts = data.Length / 32;
-        
-        
+        int numObjts = data.Length / 32;        
         for (int i = 0; i < numObjts; i++) { 
+            
+            // deserialize object transform 
             int offset = i * 32;
-
             float[] v = new float[3];
             v[0] = BitConverter.ToSingle(data, offset + 0);
             v[1] = BitConverter.ToSingle(data, offset + 4);
@@ -67,34 +54,47 @@ public class ReceiveObjects : RosReceiver
             q[1] = BitConverter.ToSingle(data, offset + 16);
             q[2] = BitConverter.ToSingle(data, offset + 20);
             q[3] = BitConverter.ToSingle(data, offset + 24);
-            Quaternion rot = RtabQuatToUnity(q) * Quaternion.Euler(-90, 0, 90);
+            Quaternion rot = RtabQuatToUnity(q) * Quaternion.Euler(-90, 0, 90); // the second quaternion is a correction since the imported mesh does not have the correct orientation
                
             int class_id = (int)BitConverter.ToSingle(data, offset + 28);
             
+            GameObject o = CreateObjectGameObject(pos, rot, class_id);
 
-
-            GameObject go = new GameObject("chair");
+            List<GameObject> icpObjects = new List<GameObject>();
+            // update the plane list 
+            if (i < icpObjects.Count)
+            {
+                // update existing planes
+                GameObject old_object = icpObjects[i];
+                icpObjects[i] = o;
+                Destroy(old_object); 
+            }
+            else
+            {
+                icpObjects.Add(o);  
+            }
             
-            Transform transform = go.transform;
-            transform.position = pos;
-            transform.rotation = rot;
-
-            go.AddComponent<MeshFilter>();
-            go.AddComponent<MeshRenderer>();
-
-            MeshFilter meshFilter = go.GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            meshFilter.mesh = chairMesh;
-
-            Material defaultMaterial = new Material(Shader.Find("Standard"));
-            meshRenderer.material = defaultMaterial;
-
-            rendered_icp_objects.Add(go); 
         }
 
-    }    
+    }   
+    
+    private GameObject CreateObjectGameObject(Vector3 pos, Quaternion rot, int class_id)
+    {
+        string label = classes[class_id];   
+        GameObject o = new GameObject(label + " icp object");
+        Transform transform = o.transform;
+        transform.position = pos;
+        transform.rotation = rot;
 
+        // Add chair mesh 
+        o.AddComponent<MeshFilter>();
+        o.AddComponent<MeshRenderer>();
+        MeshFilter meshFilter = o.GetComponent<MeshFilter>();
+        MeshRenderer meshRenderer = o.GetComponent<MeshRenderer>();
+        meshFilter.mesh = chairMesh;
 
+        return o; 
+    }
 
 
     string[] classes = {

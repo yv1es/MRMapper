@@ -61,7 +61,7 @@ ICP_OBJECTS = {56}
 
 CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
 
-# map from class_id (implicit) to class label
+# map from class_id to class label
 
 
 
