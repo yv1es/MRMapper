@@ -87,6 +87,8 @@ public class ReceivePlanes : RosReceiver
             rectangleObject.AddComponent<MeshFilter>();
             rectangleObject.AddComponent<MeshRenderer>();
 
+            
+
             rendered_planes.Add(rectangleObject);
 
             // ROS to unity coordinate correction 
@@ -94,6 +96,8 @@ public class ReceivePlanes : RosReceiver
 
             // Set the rectangle material
             MeshRenderer meshRenderer = rectangleObject.GetComponent<MeshRenderer>();
+            Material defaultMaterial = new Material(Shader.Find("Standard"));
+            meshRenderer.material = defaultMaterial;
 
             // Create the mesh for the rectangle
             Mesh rectangleMesh = new Mesh();

@@ -70,7 +70,7 @@ public class ReceiveObjects : RosReceiver
             Quaternion rot = RtabQuatToUnity(q) * Quaternion.Euler(-90, 0, 90);
                
             int class_id = (int)BitConverter.ToSingle(data, offset + 28);
-            Debug.Log("Received a " +  class_id);
+            
 
 
             GameObject go = new GameObject("chair");

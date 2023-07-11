@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 from camera_constants import * 
-from utils import setupRealsense, sendFrames
+from utils import setupRealsense, sendImages
 
 # Constants
 HOST = s.gethostname() 
@@ -50,7 +50,7 @@ def main():
                 # encode frames into one numpy array 
                 color_image = np.asanyarray(color_frame.get_data())
                 depth_image = np.asanyarray(depth_frame.get_data())
-                sendFrames(color_image, depth_image)
+                sendImages(color_image, depth_image, socket)
                 
 
         except ConnectionResetError as _:

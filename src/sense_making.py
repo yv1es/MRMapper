@@ -193,7 +193,7 @@ def process_capture(img, camera_transform, pcd):
             log("Detection {}: Starting icp fitting".format(i))
             source_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
             new_icp_object = icp_fit_object(source_cloud, pcd_bbox, camera_pos, class_id)
-            log("Detection {}: fitted icp object with rmse={} quality={}".format(i, new_icp_object.rmse, new_icp_object.quality))
+            log("Detection {}: fitted icp object with rmse={} quality={}".format(i, new_icp_object._rmse, new_icp_object.quality))
             icp_object_manager.add(new_icp_object)
             
         
@@ -204,7 +204,7 @@ def process_capture(img, camera_transform, pcd):
             new_plane = fit_plane(pcd_bbox, class_id)
             # new_plane might be none
             if new_plane:     
-                log("Detection {}: fitted plane with fit_rate={} (quality={})".format(i, new_plane.fit_rate, new_plane.quality))
+                log("Detection {}: fitted plane with fit_rate={} (quality={})".format(i, new_plane._fit_rate, new_plane.quality))
                 plane_manager.add(new_plane)
                     
     
