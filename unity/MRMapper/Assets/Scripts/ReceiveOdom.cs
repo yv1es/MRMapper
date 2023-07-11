@@ -19,11 +19,15 @@ public class ReceiveOdom : RosReceiver
 
     int port = 5002;
     string log_tag = "Odom Receiver";
-
+    GameObject realSense;
+    GameObject mainCamera; 
+    
 
     public void Start() {
         Setup(port, log_tag, ProcessReceivedBytes);
-    }
+        realSense = GameObject.Find("RealSense");
+        mainCamera = GameObject.Find("Main Camera");
+    }   
 
     private void ProcessReceivedBytes(byte[] data)
     {
@@ -40,16 +44,15 @@ public class ReceiveOdom : RosReceiver
         q[3] = BitConverter.ToSingle(data, 24);
         Quaternion cameraRot = RtabQuatToUnity(q);
 
-        //update camera transform
+        //update RealSense transform
         if (cameraPos != Vector3.zero)
         {
-            transform.position = cameraPos;
-            transform.rotation = cameraRot;
+            realSense.transform.position = transform.position + cameraPos;
+            realSense.transform.rotation = transform.rotation * cameraRot;
         }
 
-
-
     }
+
 
 }
 

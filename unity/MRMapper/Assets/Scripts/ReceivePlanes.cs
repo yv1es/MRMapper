@@ -78,6 +78,7 @@ public class ReceivePlanes : RosReceiver
 
         // Create a new game object and add necessary components
         GameObject plane = new GameObject(label + " plane");
+        plane.transform.parent = transform;
         
         // Add mesh filter, mesh renderer and material 
         plane.AddComponent<MeshFilter>();

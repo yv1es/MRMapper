@@ -40,7 +40,7 @@ public class ReceiveObjects : RosReceiver
     {
         int numObjts = data.Length / 32;        
         for (int i = 0; i < numObjts; i++) { 
-            
+             
             // deserialize object transform 
             int offset = i * 32;
             float[] v = new float[3];
@@ -82,15 +82,13 @@ public class ReceiveObjects : RosReceiver
     {
         string label = classes[class_id];   
         GameObject o = new GameObject(label + " icp object");
-        Transform transform = o.transform;
-        transform.position = pos;
-        transform.rotation = rot;
+        o.transform.parent = transform; 
+        o.transform.position = pos;
+        o.transform.rotation = rot;
 
         // Add chair mesh 
-        o.AddComponent<MeshFilter>();
-        o.AddComponent<MeshRenderer>();
-        MeshFilter meshFilter = o.GetComponent<MeshFilter>();
-        MeshRenderer meshRenderer = o.GetComponent<MeshRenderer>();
+        MeshFilter meshFilter = o.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = o.AddComponent<MeshRenderer>();
         meshFilter.mesh = chairMesh;
 
         return o; 

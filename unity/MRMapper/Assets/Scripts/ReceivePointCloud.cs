@@ -27,6 +27,7 @@ public class ReceivePointCloud : RosReceiver
     {
         // setup point cloud game object 
         pointCloud = new GameObject("Point Cloud");
+        pointCloud.transform.SetParent(transform);
 
         // setup mesh filter and renderer
         MeshFilter meshFilter = pointCloud.AddComponent<MeshFilter>();
@@ -38,6 +39,7 @@ public class ReceivePointCloud : RosReceiver
 
         Setup(port, log_tag, ProcessReceivedBytes);
     }
+
 
     private void ProcessReceivedBytes(byte[] data)
     {
@@ -57,6 +59,7 @@ public class ReceivePointCloud : RosReceiver
             Color color = new Color(data[offset + 18] / 255f, data[offset + 17] / 255f, data[offset + 16] / 255f);
             colors.Add(color);
         }
+
 
         // update mesh 
         Mesh mesh = pointCloud.GetComponent<MeshFilter>().mesh;
