@@ -19,9 +19,9 @@ public class ReceiveObjects : RosReceiver
     int port = 5004;
     string log_tag = "Objt Receiver";
 
-    private List<GameObject> rendered_icp_objects = new List<GameObject>();
-
+    private List<GameObject> icpObjects = new List<GameObject>();
     Mesh chairMesh; 
+
 
     public void Start()
     {
@@ -60,7 +60,7 @@ public class ReceiveObjects : RosReceiver
             
             GameObject o = CreateObjectGameObject(pos, rot, class_id);
 
-            List<GameObject> icpObjects = new List<GameObject>();
+            
             // update the plane list 
             if (i < icpObjects.Count)
             {

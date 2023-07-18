@@ -31,6 +31,10 @@ RUN apt update \
     python3-setuptools \
     build-essential 
 
+
+
+# pip install numpy==1.23.5
+# pip install mxnet -f https://dist.mxnet.io/python/cpu
 RUN pip3 install pandas matplotlib opencv-contrib-python cvbridge3 mxnet gluoncv numpy==1.23.1
 
 

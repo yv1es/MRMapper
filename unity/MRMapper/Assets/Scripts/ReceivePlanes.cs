@@ -66,6 +66,23 @@ public class ReceivePlanes : RosReceiver
             }
             
         }
+
+        string s = "Printing vertices:\n\n"; 
+        for (int i = 0; i < planes.Count; i++)
+        {
+            GameObject p = planes[i];
+            Mesh mesh = p.GetComponent<MeshFilter>().sharedMesh;
+            Vector3[] v = mesh.vertices;
+            
+            s += "\nVertices of " + p.name + ":\n";
+            for (int j  = 0; j < v.Length; j++)
+            {
+                Vector3 c = v[j] + p.transform.position;
+                s += "\t" + c.ToString() + "\n";
+            }
+        }
+        Debug.Log(s);
+
     }
 
 
@@ -94,10 +111,10 @@ public class ReceivePlanes : RosReceiver
         plane.transform.position = cornersMean;
 
         // set the orientation to point in the normal of the plane
-        Vector3 normal = GetNormal(cornersMean, corners[0], corners[1]);
-        Quaternion rot = Quaternion.LookRotation(normal, corners[1] - corners[0]);
-        corners[0] =  Quaternion.Inverse(rot) * corners[0]; corners[1] = Quaternion.Inverse(rot) * corners[1]; corners[2] = Quaternion.Inverse(rot) * corners[2]; corners[3] = Quaternion.Inverse(rot) * corners[3];
-        plane.transform.rotation = rot; 
+        //Vector3 normal = GetNormal(cornersMean, corners[0], corners[1]);
+        //Quaternion rot = Quaternion.LookRotation(normal, corners[1] - corners[0]);
+        //corners[0] =  Quaternion.Inverse(rot) * corners[0]; corners[1] = Quaternion.Inverse(rot) * corners[1]; corners[2] = Quaternion.Inverse(rot) * corners[2]; corners[3] = Quaternion.Inverse(rot) * corners[3];
+        //plane.transform.rotation = rot; 
 
         // Create the mesh
         Mesh rectangleMesh = new Mesh();
@@ -108,7 +125,6 @@ public class ReceivePlanes : RosReceiver
         meshFilter.sharedMesh = rectangleMesh;
 
         
-
         return plane; 
     }
 

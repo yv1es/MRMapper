@@ -14,8 +14,8 @@ Takes a saved color-depth stream and computes the position of aruco markers.
  
 
 # The camera position and rotation relative to the origin in Unity coordinate system (metric left-handed y-up)
-CAMERA_POS = np.array([0, 0, 0])
-CAMERA_ROT = np.array([60, 0, 0])
+CAMERA_POS = np.array([0.6, -0.135, 0])
+CAMERA_ROT = np.array([15, -60, 0])
 
 
 
@@ -100,7 +100,7 @@ def main():
                 messurements[id].append(pos)
 
             # Display the color frame
-            cv2.imshow('RealSense Camera', color_image_annotated)
+            cv2.imshow('RealSense Camera', cv2.cvtColor(color_image_annotated, cv2.COLOR_RGB2BGR))
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("Stopping playback")
                 raise Exception

@@ -2,9 +2,11 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+import constants
 from utils import *
-from constants import *
 
+import importlib
+importlib.reload(constants)
 
 class ObjectManager: 
     """
@@ -39,7 +41,8 @@ class ObjectManager:
         Returns:
             None
         """
-        if object.quality < MIN_QUALITY:
+        print(MINIMUM_QUALITY)
+        if object.quality < MINIMUM_QUALITY:
             self.log("Detection has low quality")
             return
 

@@ -47,7 +47,7 @@ image_msg = None
 def capture_callback(event):
     """
     This callback function in periodically exectued and its purpose it 
-    to periodically start the semantic inference pipeline.
+    to periodically start the sense making pipeline.
     Adjust the frequency of its execution with FREQ_PLANE_EXTRACTION constant. 
     It guarantees that no captures run concurrently with locking. 
 
@@ -183,7 +183,7 @@ def process_capture(img, camera_transform, pcd):
         pcd_bbox = keep_largest_cluster(pcd_bbox)
 
         # only proceed when the cut out point cloud has enough points
-        if  len(pcd_bbox.points) < 10:
+        if  len(pcd_bbox.points) < 30:
             log("Detection {}: not enough visible points in frustum point cloud".format(i))
             continue 
     
@@ -285,7 +285,7 @@ def print_yolo_prediction(class_ids, confidences, boxes):
 
 
 def log(s : str) -> None:
-    rospy.loginfo("[Semantic Inference] " + s)
+    rospy.loginfo("[Sense making] " + s)
 
 
 def main():
