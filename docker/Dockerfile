@@ -115,7 +115,7 @@ RUN cd ~/catkin_ws/src \
 # build ROS packages in workspace
 RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
-    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j10 \
+    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j$(nproc) \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
 
 
