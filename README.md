@@ -25,7 +25,6 @@ Now the setup is complete!
 
 
 ## Running MRMapper
-
 There are 3 parts to MRMapper:
 * Camera
 * Core running in the container
@@ -42,9 +41,81 @@ In the `MRMapper/camera` folder are several python scripts.
 * `stream.py` Start a live stream from the camera to MRMapper, use this for realtime operation. 
 * `record.py` This script allows you to prerecord footage with the camera to a file on disk. (-h for help) 
 * `playback.py` Use this to view recorded footage and to replay it for MRMapper, this is usefull for testing and development. (-h for help) 
-* `groudtruth.py` The will let you determine the position of aruco markers in the scene relative to the current camera position, usefull for groud truth evaluation. (-h for help) 
+* `groudtruth.py` This script will let you determine the position of aruco markers in the scene relative to the current camera position, usefull for groud truth evaluation. (-h for help) 
 
 ### Core 
+Launch `MRMapper/docker/start.bat` to spin up a termporary container with MRMapper running. 
+
+You can also use `MRMapper/docker/start.bat` to create a new docker container. 
+If you created a container earlyer and want to reuse it, first check that the container is running. 
+You can get a shell in a running docker container with this command `docker exec -it <container id> bash`.
+
+In the container execute `roslaunch MRMapper launch.xml` to start MRMapper. 
+With `vim ~/catking_ws/src/MRMapper/src/constants.py` you can tune the parameters.
+
+### Unity 
+You can find a Unity project under `MRMapper/unity`. Open Unity and launch the play view. 
+The whole logic is contained under the MRMapper game object, see the attached scripts. 
+
+After playing the scene it will connect to the core running in the container. 
+It will spawn a child game object that that represents the reconstructed point cloud and it will also spawn 
+other child game objects representing fitted planes and objects. 
+
+### Summary 
+1. Launch the core of MRMapper with `MRMapper/docker/start.bat` or with the command `roslaunch MRMapper launch.xml` if you already have shell in a running container.
+2. Start Unity and click play to start the play view.
+3. Either stream a prerecorded file from disk with `MRMapper/camera/playback.py` or connect a RealSense camera and start the stream with `MRMapper/camera/stream.py`
+
+Now you should see the point cloud and reconstruced planes in Unity. 
+
+## Project hierarchy 
+
+MRMapper  
+├── camera  
+│   ├── Camera scripts  
+│   └── Camera constants  
+├── docker  
+│   ├── Script to controll docker  
+│   └── Dockerfile  
+├── launch  
+│   └── ROS launch files  
+├── src  
+│   ├── Python source of the ROS nodes  
+│   └── constants.py Here you can tune the parameters  
+└── unity  
+└── MRMapper (Unity project)  
+
+## Remarks
+
+### Camera calibration
+The `MRMapper/camera/stream.py` script will print the camera calibration of the connected RealSense camera. 
+You should update the camera parameters for your RealSense. 
+Update the parameters in 
+* `MRMapper/camera/camera_constants.py`
+* `MRMapper/src/constants.py` 
+
+### Parameter tuning
+You can view and modify all parameters for the sense making under `MRMapper/src/constants.py` 
+
+### RTABMap parameters
+You can adjust RTABMaps parameter in the launch file `MRMapper/launch/launch_rtabmap.xml`, there you can also find a link to a list of all parameters. 
+The "Grid/CellSize" parameter controlls the density of the point cloud. 
+
+### Ports 
+By default MRMapper uses the TCP ports 5000-5004. If you want to use other ports update them in accordingly in 
+* `MRMapper/camera/camera_constants.py`
+* `MRMapper/src/constants.py`
+
+And note that the batch scripts under `MRMapper/docker` assume the deault ports. 
+
+
+
+
+
+
+
+
+
 
 
 
