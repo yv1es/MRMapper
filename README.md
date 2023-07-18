@@ -17,8 +17,8 @@ Run `MRMapper/docker/build.bat` to build the docker image called mrmapper (the i
 ### Virtual environment
 The python scripts controlling the camera run on the host system. In this step we setup a virtual environment and install all dependencies.
 1. Open a powershell and navigate to the `MRMapper/camera` folder.
-2. Execute `python3 -m venv env` to create a new virtual environment called "env".
-3. Activate the virtual environment with `.\env\Scripts\activate`
+2. Execute `python -m venv env` to create a new virtual environment called "env".
+3. Activate the virtual environment with `.\env\Scripts\activate` (This can cause an error if the execution policy forbids the execution of scripts. Execute `set-executionpolicy remotesigned` in an administrator powershell to allow the execution of localy created scripts.)
 4. Install depencendies in the virtual environment with `pip install -r requirements.txt`
 
 Now the setup is complete! 
