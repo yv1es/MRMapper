@@ -55,7 +55,7 @@ RUN cd ~/Open3D \
         -D BUILD_EXAMPLES=OFF ..
 
 RUN cd ~/Open3D/build \
-    && make -j$(nproc) 
+    && make -j4
 
 RUN cd ~/Open3D/build \
     && make install \
@@ -115,7 +115,7 @@ RUN cd ~/catkin_ws/src \
 # build ROS packages in workspace
 RUN . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
-    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j$(nproc) \
+    && catkin_make -DCMAKE_BUILD_TYPE=RELEASE -j4 \
     && chmod +x ~/catkin_ws/src/MRMapper/src/*.py
 
 
