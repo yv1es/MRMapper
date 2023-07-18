@@ -133,7 +133,7 @@ GameObject:
   m_Component:
   - component: {fileID: 129237268}
   m_Layer: 0
-  m_Name: Camera Offset
+  m_Name: Oculus Offset
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -261,7 +261,7 @@ GameObject:
   - component: {fileID: 963194227}
   - component: {fileID: 963194230}
   m_Layer: 0
-  m_Name: Main Camera
+  m_Name: Oculus
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -491,11 +491,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 975351854}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 781657c5fb8b4c64588c0d5920989972, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  realSenseToOculusPos: {x: 0, y: -0.05, z: 0}
+  realSenseToOculusRot: {x: 0, y: 0, z: 0, w: 1}
 --- !u!1 &1324821082
 GameObject:
   m_ObjectHideFlags: 0

@@ -6,32 +6,49 @@ using UnityEngine.UIElements;
 public class AlignCameras : MonoBehaviour
 {
     GameObject realSense;
-    GameObject mainCamera;
+    GameObject oculus;
+    GameObject offset; 
+
+    // define the position of the Oculus relative to the RealSense
+    public Vector3 realSenseToOculusPos = new Vector3(0, -0.05f, 0);
+    public Quaternion realSenseToOculusRot = Quaternion.Euler(0, 0, 0); 
+
 
     void Start()
     {
         realSense = GameObject.Find("RealSense");
-        mainCamera = GameObject.Find("Main Camera");
+        oculus = GameObject.Find("Oculus");
+        offset = GameObject.Find("Oculus Offset"); 
     }
 
     void Update()
     {
+        // compute where the Oculus should be positioned 
+        Vector3 shouldPos = realSenseToOculusPos + realSense.transform.position ;
+        Quaternion shouldRot = realSenseToOculusRot * realSense.transform.rotation;
 
-        // find difference between 
-        float scale = 1f; 
-        Vector3 posDiff = mainCamera.transform.position - realSense.transform.position;
-        posDiff = scale * posDiff;
-        Quaternion rotDiff = Quaternion.Inverse(realSense.transform.rotation) * mainCamera.transform.rotation;
-        rotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, scale);
+        // where the oculus is currently positioned
+        Vector3 isPos = oculus.transform.position;
+        Quaternion isRot = oculus.transform.rotation;   
+
+
+        // compute the correction 
+        Vector3 posDiff = shouldPos - isPos;
+        Quaternion rotDiff = shouldRot * Quaternion.Inverse(isRot);
+
+        float absPosDiff = posDiff.magnitude;
+        float absRotDiff = 2f * Mathf.Rad2Deg * Mathf.Acos(Mathf.Abs(rotDiff.w));
+
 
         float tPos = 0.1f;
-        float rPos = 0.1f;
-        if (posDiff.magnitude > tPos || rotDiff.eulerAngles.magnitude > rPos)
+        float tRot = 10f;
+
+
+        if (absPosDiff > tPos || absRotDiff > tRot)
         {
-            transform.position = transform.position + posDiff;
-            transform.rotation = transform.rotation * rotDiff;
-            Debug.Log("Updating origin " + posDiff);
-            Debug.Log("Updating origin " + rotDiff);
+            offset.transform.position = posDiff + offset.transform.position;
+            offset.transform.rotation = rotDiff * offset.transform.rotation;
+            Debug.Log("Resetting Oculus offset"); 
         }
 
   
