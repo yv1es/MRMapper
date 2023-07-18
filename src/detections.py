@@ -41,8 +41,7 @@ class ObjectManager:
         Returns:
             None
         """
-        print(MINIMUM_QUALITY)
-        if object.quality < MINIMUM_QUALITY:
+        if object.quality < MIN_QUALITY:
             self.log("Detection has low quality")
             return
 
