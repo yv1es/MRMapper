@@ -3,8 +3,7 @@ import rospy
 from sensor_msgs.msg import PointCloud2
 
 from unity_sender import UnitySender 
-from constants import *
-
+import constants
 """
 This node sends the point cloud published by rtabmap_ros to unity 
 """
@@ -19,7 +18,7 @@ def main():
 
     # Create UnitySender for point cloud data
     global sender_pcd, sender_odom
-    sender_pcd = UnitySender(HOST, PORT_PCL, 'Pcd Sender')
+    sender_pcd = UnitySender(constants.HOST, constants.PORT_PCL, 'Pcd Sender')
     sender_pcd.start()
 
     rospy.Subscriber("/rtabmap/cloud_map", PointCloud2, callback_cloud_map)

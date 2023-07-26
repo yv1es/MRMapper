@@ -1,121 +1,98 @@
-# MRMapper
+# MRMapper - Detection and Sense Making for Mixed Reality
 
-## Installation 
+## Installation
 ### Prerequisites
-A windows system. 
-Following applications need to be installed on your host system: 
-- [Docker](https://www.docker.com/)
-- [Unity](https://unity.com)
-- [Python3](https://www.python.org/) (with [virtualenv](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/))
+Before installing MRMapper, ensure that your system meets the following requirements:
+* Windows operating system
+* [Docker](https://www.docker.com/) installed
+* [Unity](https://unity.com) installed
+* [Python 3](https://www.python.org/) with [virtualenv](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) installed
 
-### Docker
-The core of MRMapper comes installed in a docker image. 
-First clone this repository. 
-On windows there is a batch script for building and running the docker image, container respectively. 
-Run `MRMapper/docker/build.bat` to build the docker image called mrmapper (the image will require ~13 GB disk space and the build can take up to an hour). 
+### Core
+To set up the core functionality of MRMapper, follow these steps:
 
-### Virtual environment
-The python scripts controlling the camera run on the host system. In this step we setup a virtual environment and install all dependencies.
-1. Open a powershell and navigate to the `MRMapper/camera` folder.
-2. Execute `python -m venv env` to create a new virtual environment called "env".
-3. Activate the virtual environment with `.\env\Scripts\activate` (This can cause an error if the execution policy forbids the execution of scripts. Execute `set-executionpolicy remotesigned` in an administrator powershell to allow the execution of localy created scripts.)
-4. Install depencendies in the virtual environment with `pip install -r requirements.txt`
+1. Clone this repository to your local machine.
+2. Open a terminal and navigate to the `MRMapper/core` folder.
+3. Execute the provided batch script: `build_image.bat` to build the Docker image named `mrmapper-image`. Please note that the image will require approximately 13 GB of disk space, and the build process can take up to an hour.
 
-Now the setup is complete! 
+### Camera Control
+The camera control scripts, responsible for managing the RealSense camera, run directly on the host system. To set up the necessary environment and install dependencies, follow these steps:
 
+1. Open a PowerShell window and navigate to the `MRMapper/camera` folder.
+2. Create a new virtual environment named "env" by executing the following command: `python -m venv env`.
+3. Activate the virtual environment with the command: `.\env\Scripts\activate`. Note: If you encounter an error related to script execution policy, run the following command in an administrator PowerShell to allow execution of locally created scripts: `set-executionpolicy remotesigned`.
+4. Install the required dependencies inside the virtual environment using the command: `pip install -r requirements.txt`.
+
+Congratulations! The setup process is now complete, and MRMapper is ready to be used.
 
 ## Running MRMapper
-There are 3 parts to MRMapper:
-* Camera
-* Core running in the container
-* Unity
 
-### Camera 
-The system was tested with a [Intel RealSense D435i](https://www.intelrealsense.com/depth-camera-d435i/) camera that was connected via a USB 3.0 cable. 
+MRMapper consists of three main components:
 
-To run the following scripts make sure the virtual environment that was setup in the installation section is active in your current terminal session. 
-When using powershell "(env)" should appear to the left of "PS".
-If this is not the case, activate the virtual environment by executing the script located at `/MRMapper/camera/env/Scripts/activate` 
+### Core
+To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
 
-In the `MRMapper/camera` folder are several python scripts. 
-* `stream.py` Start a live stream from the camera to MRMapper, use this for realtime operation. 
-* `record.py` This script allows you to prerecord footage with the camera to a file on disk. (-h for help) 
-* `playback.py` Use this to view recorded footage and to replay it for MRMapper, this is usefull for testing and development. (-h for help) 
-* `groudtruth.py` This script will let you determine the position of aruco markers in the scene relative to the current camera position, usefull for groud truth evaluation. (-h for help) 
+### Unity
+The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity (opening it for the first time may take a few minutes). Next, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
 
-### Core 
-Launch `MRMapper/docker/start.bat` to spin up a termporary container with MRMapper running. 
+The primary logic is contained under the "MRMapper" game object.
 
-You can also use `MRMapper/docker/start.bat` to create a new docker container. 
-If you created a container earlyer and want to reuse it, first check that the container is running. 
-You can get a shell in a running docker container with this command `docker exec -it <container id> bash`.
+After playing the Unity scene, it will connect to the core running in the container. It will spawn a child game object representing the reconstructed point cloud and other game objects representing fitted planes and objects.
 
-In the container execute `roslaunch MRMapper launch.xml` to start MRMapper. 
-With `vim ~/catking_ws/src/MRMapper/src/constants.py` you can tune the parameters.
+### Camera
+The system has been tested with an [Intel RealSense D435i](https://www.intelrealsense.com/depth-camera-d435i/) camera connected via a USB 3.0 cable.
 
-### Unity 
-You can find a Unity project under `MRMapper/unity`. Open Unity and launch the play view. 
-The whole logic is contained under the MRMapper game object, see the attached scripts. 
+To run the camera scripts, please ensure that the virtual environment set up during the installation is active in your current terminal session. If you are using PowerShell, "(env)" should appear to the left of "PS". If not, activate the virtual environment by executing the script `/MRMapper/camera/env/Scripts/activate`.
 
-After playing the scene it will connect to the core running in the container. 
-It will spawn a child game object that that represents the reconstructed point cloud and it will also spawn 
-other child game objects representing fitted planes and objects. 
+In the `MRMapper/camera` folder, you will find several Python scripts:
 
-### Summary 
-1. Launch the core of MRMapper with `MRMapper/docker/start.bat` or with the command `roslaunch MRMapper launch.xml` if you already have shell in a running container.
-2. Start Unity and click play to start the play view.
-3. Either stream a prerecorded file from disk with `MRMapper/camera/playback.py` or connect a RealSense camera and start the stream with `MRMapper/camera/stream.py`
+* `stream.py`: Start a live stream from the camera to MRMapper for real-time operation.
+* `record.py`: Record footage with the camera to a file on disk. Use the "-h" flag for help on how to use this script.
+* `playback.py`: View recorded footage and replay it for MRMapper. This is useful for testing and development. Use the "-h" flag for help on how to use this script.
+* `groundtruth.py`: Determine the position of ArUco markers in the scene relative to the current camera position. This is useful for ground truth evaluation. Use the "-h" flag for help on how to use this script.
 
-Now you should see the point cloud and reconstruced planes in Unity. 
 
-## Project hierarchy 
+### Summary
+To run MRMapper, follow these steps:
 
-MRMapper  
-├── camera  
-│   ├── Camera scripts  
-│   └── Camera constants  
-├── docker  
-│   ├── Script to controll docker  
-│   └── Dockerfile  
-├── launch  
-│   └── ROS launch files  
-├── src  
-│   ├── Python source of the ROS nodes  
-│   └── constants.py Here you can tune the parameters  
-└── unity  
-└── MRMapper (Unity project)  
+1. Launch the MRMapper core with `MRMapper/core/run.bat`.
+2. Start Unity and click play to enter the play view.
+3. To view a prerecorded file from disk, use `MRMapper/camera/playback.py`. Alternatively, connect a RealSense camera and start the stream with `MRMapper/camera/stream.py`.
+
+You should now see the point cloud and reconstructed planes in Unity.
+
+## Meta Quest 2
+The Unity project is set up to support the [Meta Quest 2](https://www.meta.com/us/en/quest/products/quest-2/). Connect your Meta Quest 2 with [Quest Link](https://www.meta.com/help/quest/articles/headsets-and-accessories/oculus-link/) to the computer. 
+Now, when Link is enabled and you start the SampleScene, the Quest 2 will display it. 
+
+It is assumed that the RealSense camera is mounted to the Meta Quest 2. The MRMapper game object in Unity carries the `AlignCamera` script. 
+This script automatically aligns the origin of the reconstructed scene with that of the Quest. For this purpose, it needs the position
+and orientation of the Quest relative to the RealSense camera in physical space. Click on the MRMapper object and set these parameters in the Unity Inspector (the parameters can also be tuned while the scene is running) to ensure that the reconstruction is aligned with the real world when using the Quest. 
+Note that Unity uses a left-handed Y-up coordinate system, the position is in meters and the orientation in degrees. 
+
+## Project Hierarchy
+
+The MRMapper project is organized into the following directories:
+
+* `MRMapper/core/ros_node/mr-mapper/src/`: Contains the Python source code for the core functionalities, including object detection and sense-making.
+* `MRMapper/camera/`: Includes all the scripts for recording and streaming with the RealSense camera.
+* `MRMapper/unity/MRMapper`: Contains the Unity demo project.
 
 ## Remarks
 
-### Camera calibration
-The `MRMapper/camera/stream.py` script will print the camera calibration of the connected RealSense camera. 
-You should update the camera parameters for your RealSense. 
-Update the parameters in 
+### Camera Calibration
+The `MRMapper/camera/stream.py` script will print the camera calibration of the connected RealSense camera. It is essential to make sure you update the camera parameters specific to your RealSense device. Update the parameters in the following files:
 * `MRMapper/camera/camera_constants.py`
-* `MRMapper/src/constants.py` 
+* `MRMapper/core/ros_node/mr-mapper/src/constants.py`
 
-### Parameter tuning
-You can view and modify all parameters for the sense making under `MRMapper/src/constants.py` 
+### Parameter Tuning
+To view and modify all parameters for the sense-making process, navigate to `MRMapper/core/ros_node/mr-mapper/src/constants.py`. You can adjust these parameters based on your specific requirements.
 
-### RTABMap parameters
-You can adjust RTABMaps parameter in the launch file `MRMapper/launch/launch_rtabmap.xml`, there you can also find a link to a list of all parameters. 
-The "Grid/CellSize" parameter controlls the density of the point cloud. 
+### RTABMap Parameters
+You can fine-tune RTABMap's parameters in the launch file `MRMapper/core/ros_node/mr-mapper/launch/launch_rtabmap.xml`. For reference, you can find all of RTAB-Map's parameters listed in this [header file](https://github.com/introlab/rtabmap/blob/master/corelib/include/rtabmap/core/Parameters.h). The "Grid/CellSize" parameter controls the density of the point cloud.
 
-### Ports 
-By default MRMapper uses the TCP ports 5000-5004. If you want to use other ports update them in accordingly in 
+### Ports
+By default, MRMapper uses TCP ports 5000-5004. If you wish to use other ports, update them accordingly in:
 * `MRMapper/camera/camera_constants.py`
-* `MRMapper/src/constants.py`
-
-And note that the batch scripts under `MRMapper/docker` assume the deault ports. 
-
-
-
-
-
-
-
-
-
-
-
-
+* `MRMapper/core/ros_node/mr-mapper/src/constants.py`
+* `MRMapper/core/run.bat`

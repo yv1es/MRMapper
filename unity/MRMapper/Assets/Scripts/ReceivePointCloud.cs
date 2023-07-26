@@ -13,6 +13,9 @@ using UnityEngine.AI;
 using UnityEngine.XR;
 
 
+/*
+ * This script receives the point cloud and renders it as a Game Object called "Point Cloud"
+ */
 public class ReceivePointCloud : RosReceiver
 {
 

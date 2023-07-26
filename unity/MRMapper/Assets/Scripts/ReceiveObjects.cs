@@ -13,6 +13,9 @@ using UnityEngine.XR;
 using static UnityEditor.PlayerSettings;
 
 
+/*
+ * This script renders the objects received from MRMapper core.
+ */
 public class ReceiveObjects : RosReceiver
 {
 
@@ -71,11 +74,9 @@ public class ReceiveObjects : RosReceiver
             }
             else
             {
-                icpObjects.Add(o);  
+                icpObjects.Add(o);
             }
-            
         }
-
     }   
     
     private GameObject CreateObjectGameObject(Vector3 pos, Quaternion rot, int class_id)

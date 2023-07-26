@@ -3,9 +3,10 @@ import open3d as o3d
 import numpy as np
 import copy 
 
-from constants import *
+
 from utils import *
 from detections import Plane, ICPObject
+import constants
 
 """ 
 This file contains function operating on (Open3d) point clouds that are used mostly in the semantic inference stage. 
@@ -25,7 +26,7 @@ def pcd_from_bbox(box, extrinsics, pcd):
     Returns:
         open3d.geometry.PointCloud: The point cloud within the frustum spun by the bounding box.
     """
-    intrinsics = np.array(CAMERA_K).reshape((3, 3))
+    intrinsics = np.array(constants.CAMERA_K).reshape((3, 3))
 
     x1, y1, x2, y2 = box
     
@@ -229,8 +230,11 @@ def fit_plane(pcd, class_id):
     _, inliers = pcd.segment_plane(distance_threshold=0.002, ransac_n=3, num_iterations=100000)
     inlier_cloud = pcd.select_by_index(inliers)
     # inlier_cloud = keep_largest_cluster(inlier_cloud)
-    if (len(inlier_cloud.points) == 0):
+    if (len(inlier_cloud.points) < 10):
         return None
+    # in rare cases the call below can cause an exception, this happens when the inlier cloud is of lower dimension. 
+    # For example when all point lay exactly in a plane. The exception is the result of a library call in c++ and can not be catched here. 
+    # To do: add checks for low dimensionality 
     obox = o3d.geometry.OrientedBoundingBox.create_from_points(inlier_cloud.points)
     fit_rate = len(inlier_cloud.points) / len (pcd.points)
     corners = obox_to_corners(obox).reshape((4, 3))
@@ -251,7 +255,7 @@ def keep_largest_cluster(pcd):
     Returns:
         open3d.geometry.PointCloud: The largest cluster point cloud.
     """
-    labels = np.array(pcd.cluster_dbscan(eps=DBSCAN_EPS, min_points=DBSCAN_MIN_POINTS))
+    labels = np.array(pcd.cluster_dbscan(eps=constants.DBSCAN_EPS, min_points=constants.DBSCAN_MIN_POINTS))
     label_counts = np.bincount(labels[labels != -1])
     if label_counts.shape[0] == 0:
         return o3d.geometry.PointCloud()

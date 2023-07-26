@@ -13,7 +13,9 @@ using UnityEngine;
 using UnityEngine.XR;
 using static UnityEditor.PlayerSettings;
 
-
+/*
+ * This script moves the RealSense camera object. 
+ */
 public class ReceiveOdom : RosReceiver
 {
 
@@ -22,7 +24,6 @@ public class ReceiveOdom : RosReceiver
     GameObject realSense;
     GameObject mainCamera; 
     
-
     public void Start() {
         Setup(port, log_tag, ProcessReceivedBytes);
         realSense = GameObject.Find("RealSense");
