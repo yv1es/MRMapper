@@ -2,6 +2,7 @@ import socket as s
 import cv2
 import time
 import argparse
+import time
 
 from utils import VideoReader, sendImages
 from camera_constants import *
@@ -30,6 +31,8 @@ def main():
     vid = VideoReader(input_file_path)    
     vid.skipFrames(max(0, args['frame_number']))
 
+    start_time = time.time()
+
     while True:
              
         try:
@@ -46,6 +49,19 @@ def main():
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     print("Stopping playback")
                     raise Exception
+
+                # Calculate the time taken for one iteration
+                time_taken = time.time() - start_time
+
+                # Calculate the remaining time to achieve the desired loop rate
+                remaining_time = 1./FPS - time_taken
+
+                if remaining_time > 0:
+                    # Add a delay to ensure the loop runs not more than 60 times a second
+                    time.sleep(remaining_time)
+
+                # Update the start time for the next iteration
+                start_time = time.time()
 
                 
         except ConnectionResetError as _:

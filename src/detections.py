@@ -5,8 +5,6 @@ from scipy.spatial.transform import Rotation
 import constants
 from utils import *
 
-import importlib
-importlib.reload(constants)
 
 class ObjectManager: 
     """
@@ -41,7 +39,7 @@ class ObjectManager:
         Returns:
             None
         """
-        if object.quality < MIN_QUALITY:
+        if object.quality < constants.MINIMUM_QUALITY:
             self.log("Detection has low quality")
             return
 
@@ -124,10 +122,11 @@ class Plane:
         Returns:
             None
         """
+        corners = corners[corners[:, 0].argsort()]
         self._corners = corners
         self._class_id = class_id    
         self._fit_rate = fit_rate
-        self.quality = min(1, fit_rate/FIT_RATE_NORMALIZATION)
+        self.quality = min(1, fit_rate/constants.FIT_RATE_NORMALIZATION)
     
     
     def distance(self, other_plane):
@@ -145,7 +144,7 @@ class Plane:
         """
         if self._class_id != other_plane.get_class_id():
             return INF 
-        area_factor = min(self.area() / AREA_NORMALIZATION, 1)
+        area_factor = min(self.area() / constants.AREA_NORMALIZATION, 1)
         sum_squared_diff = np.sum((self._corners - other_plane.get_corners()) ** 2)
         return sum_squared_diff / area_factor
 
@@ -162,9 +161,9 @@ class Plane:
         Retruns:
             None
         """
-        area_factor = min(self.area() / AREA_NORMALIZATION, 1)
+        area_factor = min(self.area() / constants.AREA_NORMALIZATION, 1)
         # k = PLANE_UPDATE_WEIGHT * area_factor * self._fit_rate ** 2
-        k = PLANE_UPDATE_WEIGHT
+        k = constants.PLANE_UPDATE_WEIGHT
         # self.log("Plane update weight={}".format(k))
         self._corners = self._corners * (1-k) + p.get_corners() * k
 
@@ -230,7 +229,7 @@ class ICPObject:
         self._transform = transform 
         self._class_id = class_id 
         self._rmse = rmse
-        self.quality = 1 - min(1, rmse/RMSE_NORMALIZATION)
+        self.quality = 1 - min(1, rmse/constants.RMSE_NORMALIZATION)
 
     def distance(self, new_object): 
         """
@@ -259,7 +258,7 @@ class ICPObject:
         Args:
             new_object (ICPObject): The object to update from.
         """
-        k = ICP_OBJECT_UPDATE_WEIGHT
+        k = constants.ICP_OBJECT_UPDATE_WEIGHT
         self._transform = self._transform * (1-k) + new_object.get_transform() * k 
     
     def get_transform(self): 

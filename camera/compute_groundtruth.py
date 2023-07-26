@@ -14,8 +14,8 @@ Takes a saved color-depth stream and computes the position of aruco markers.
  
 
 # The camera position and rotation relative to the origin in Unity coordinate system (metric left-handed y-up)
-CAMERA_POS = np.array([0.6, -0.135, 0])
-CAMERA_ROT = np.array([15, -60, 0])
+CAMERA_POS = np.array([0, 0, 0])
+CAMERA_ROT = np.array([15,0,0])
 
 
 
@@ -49,7 +49,7 @@ def pose_esitmation(frame, matrix_coefficients=CAMERA_K, distortion_coefficients
             
             # Draw a square around the markers
             cv2.aruco.drawDetectedMarkers(frame, corners) 
-
+    
             # Draw Axis
             cv2.aruco.drawAxis(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, MARKER_SIZE/1000)  
             

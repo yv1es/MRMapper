@@ -3,7 +3,7 @@ import rospy
 from sensor_msgs.msg import PointCloud2, Image
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
-import mxnet as mx
+import mxnet as mx 
 from gluoncv import model_zoo, data
 import threading
 import numpy as np
@@ -15,7 +15,7 @@ from unity_sender import UnitySender
 from detections import ObjectManager, ICPObject
 from point_cloud_processing import *
 from utils import *
-from constants import *
+import constants
 
 
 """
@@ -157,7 +157,7 @@ def process_capture(img, camera_transform, pcd):
     for i, (class_id, confidence, bbox) in enumerate(zip(class_ids, confidences, boxes)):
 
         # only process detections for which we can fit a plane or icp 
-        if int(class_id) not in ICP_OBJECTS | FLAT_OBJECTS: 
+        if int(class_id) not in constants.ICP_OBJECTS | constants.FLAT_OBJECTS: 
             continue
 
         log("--------------------------------------")
@@ -165,7 +165,7 @@ def process_capture(img, camera_transform, pcd):
 
         # only proceed when the bounding box has MIN_BOUNDING_BOX_MARGIN pixels distance from the frame borders
         x1, y1, x2, y2 = bbox
-        if min(x1, y1) < MIN_BOUNDING_BOX_MARGIN or min(img.shape[1] - x2, img.shape[0] - y2) < MIN_BOUNDING_BOX_MARGIN: 
+        if min(x1, y1) < constants.MIN_BOUNDING_BOX_MARGIN or min(img.shape[1] - x2, img.shape[0] - y2) < constants.MIN_BOUNDING_BOX_MARGIN: 
             log("Detection {}: detection was to close to frame borders".format(i))
             continue
 
@@ -189,7 +189,10 @@ def process_capture(img, camera_transform, pcd):
     
         
         # compute icp transform for specific objects
-        if int(class_id) in ICP_OBJECTS: 
+        if int(class_id) in constants.ICP_OBJECTS: 
+            if confidence < 0.8:
+                log("Detection {}: Not confident enough".format(i))
+                continue
             log("Detection {}: Starting icp fitting".format(i))
             source_cloud = chair_mesh.sample_points_uniformly(number_of_points=1000)
             new_icp_object = icp_fit_object(source_cloud, pcd_bbox, camera_pos, class_id)
@@ -198,7 +201,7 @@ def process_capture(img, camera_transform, pcd):
             
         
         # fit a plane for flat objects
-        if int(class_id) in FLAT_OBJECTS:
+        if int(class_id) in constants.FLAT_OBJECTS:
             log("Detection {}: Starting plane fitting".format(i))
             # plane fitting
             new_plane = fit_plane(pcd_bbox, class_id)
@@ -256,7 +259,7 @@ def yolo_predict(img):
     boxes[:, 3] *= scale[1]
 
     # filter predictions by confidence
-    idx = np.where(confidences < YOLO_CONFIDENCE_TRESHOLD)[0][0]
+    idx = np.where(confidences < constants.YOLO_CONFIDENCE_TRESHOLD)[0][0]
     class_ids = class_ids[:idx]
     confidences = confidences[:idx]
     boxes = boxes[:idx]
@@ -281,7 +284,7 @@ def print_yolo_prediction(class_ids, confidences, boxes):
         class_id = class_ids[i]
         confidence = confidences[i]
         bbox = boxes[i]
-        log("\t Detection {}:, Class={}, Confidence={}".format(i, CLASSES[int(class_id)], confidence))
+        log("\t Detection {}:, Class={}, Confidence={}".format(i, constants.CLASSES[int(class_id)], confidence))
 
 
 def log(s : str) -> None:
@@ -291,13 +294,13 @@ def log(s : str) -> None:
 def main():
     # setup plane and object manager 
     global plane_manager, icp_object_manager 
-    plane_manager = ObjectManager(MIN_PLANE_DISTANCE, log)
-    icp_object_manager = ObjectManager(MIN_ICP_OBJ_DIST, log)
+    plane_manager = ObjectManager(constants.MIN_PLANE_DISTANCE, log)
+    icp_object_manager = ObjectManager(constants.MIN_ICP_OBJ_DIST, log)
 
     # setup unity senders
     global plane_sender, icp_object_sender
-    plane_sender = UnitySender(HOST, PORT_PLANES, 'Plane Sender')
-    icp_object_sender = UnitySender(HOST, PORT_OBJECTS, 'Object Sender')
+    plane_sender = UnitySender(constants.HOST, constants.PORT_PLANES, 'Plane Sender')
+    icp_object_sender = UnitySender(constants.HOST, constants.PORT_OBJECTS, 'Object Sender')
     plane_sender.start()
     icp_object_sender.start()
 
@@ -309,7 +312,7 @@ def main():
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, image_callback)
 
     # set timer for capture callback 
-    rospy.Timer(rospy.Duration(FREQ_SENSE_MAKING), capture_callback)
+    rospy.Timer(rospy.Duration(constants.FREQ_SENSE_MAKING), capture_callback)
     rospy.on_shutdown(shutdown)
     rospy.spin()
 

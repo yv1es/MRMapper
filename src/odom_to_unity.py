@@ -4,7 +4,7 @@ import numpy as np
 from nav_msgs.msg import Odometry
 
 from unity_sender import UnitySender 
-from constants import *
+import constants
 
 """ 
 This node sends the current camera position and orientation from rtabmap_ros to unity. 
@@ -23,7 +23,7 @@ def main():
     
     # create UnitySender for odometry data
     global sender_odom
-    sender_odom = UnitySender(HOST, PORT_ODOM, 'Odom Sender')
+    sender_odom = UnitySender(constants.HOST, constants.PORT_ODOM, 'Odom Sender')
     sender_odom.start()
 
     rospy.Subscriber("/rtabmap/odom", Odometry, callback_odom)

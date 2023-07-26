@@ -9,7 +9,7 @@
     </node>
 
     <!-- Odometry -->
-    <node pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry" output="screen"> <!--output="screen"-->
+    <node pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry"> <!--output="screen"-->
       <param name="subscribe_depth" type="bool"   value="false"/>
       <param name="subscribe_rgb" type="bool"   value="false"/>
       <param name="subscribe_rgbd" type="bool"   value="true"/>
@@ -33,7 +33,7 @@
           <param name="RGBD/OptimizeFromGraphEnd" type="bool" value="false"/>
 
           <!-- Adjust for point cloud density -->
-          <param name="Grid/CellSize" value="0.05"/>
+          <param name="Grid/CellSize" value="0.03"/>
 
     </node>
             

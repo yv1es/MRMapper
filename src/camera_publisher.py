@@ -13,8 +13,8 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
-from constants import *
 from utils import Msg
+import constants
 
 fps_counter = 50
 
@@ -26,7 +26,7 @@ This node receives the RGBD camera stream over tcp from the host machine and pub
 
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
-    socket.bind((HOST, PORT_CAMERA)) 
+    socket.bind((constants.HOST, constants.PORT_CAMERA)) 
     socket.listen()
     return socket
 
@@ -34,14 +34,14 @@ def setupSocket():
 def setupCameraInfo():
     # information on parameters. http://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/CameraInfo.html
     camera_info = CameraInfo()
-    camera_info.width = FRAME_WIDTH
-    camera_info.height = FRAME_HEIGHT
-    camera_info.distortion_model = CAMERA_DISTORTION_MODEL
+    camera_info.width = constants.FRAME_WIDTH
+    camera_info.height = constants.FRAME_HEIGHT
+    camera_info.distortion_model = constants.CAMERA_DISTORTION_MODEL
 
-    camera_info.D = CAMERA_D
-    camera_info.K = CAMERA_K                
+    camera_info.D = constants.CAMERA_D
+    camera_info.K = constants.CAMERA_K                
     camera_info.R = list(np.eye(3).reshape(9).astype(np.float32))
-    camera_info.P = list(np.hstack([np.array(CAMERA_K).reshape((3, 3)), np.zeros((3, 1))]).reshape(12).astype(np.float32))
+    camera_info.P = list(np.hstack([np.array(constants.CAMERA_K).reshape((3, 3)), np.zeros((3, 1))]).reshape(12).astype(np.float32))
     return camera_info
 
 
@@ -56,7 +56,7 @@ def decode(msg_bytes):
 def main():
     # initialize node and topics 
     rospy.init_node('camera_node', anonymous=True)
-    color_pub = rospy.Publisher('/camera/rgb/image_rect_color', Image, queue_size=10)
+    color_pub = rospy.Publisher('/camera/rgb/image_rect_color', Image, queue_size=1)
     depth_pub = rospy.Publisher('/camera/depth_registered/image_raw', Image, queue_size=10)
     info_pub = rospy.Publisher('/camera/rgb/camera_info', CameraInfo, queue_size=10)
 
