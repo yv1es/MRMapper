@@ -14,8 +14,11 @@ using UnityEngine;
 using UnityEngine.XR;
 
 
-
-
+/*
+ * The RosReceiver class handles the connection to MRMapper core. 
+ * Sub-classes do only need to implement the ProcessReceivedBytes function and call Setup(port, log_tag, ProcessReceivedBytes) to start the connection. 
+ * ProcessReceivedBytes is called everytime bytes are received from MRMapper core. 
+ */
 public class RosReceiver : MonoBehaviour
 {
     private readonly ConcurrentQueue<Action> runOnMainThread = new ConcurrentQueue<Action>();

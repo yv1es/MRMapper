@@ -13,6 +13,9 @@ using UnityEngine.XR;
 using static UnityEditor.PlayerSettings;
 
 
+/*
+ * This script renders the objects received from MRMapper core.
+ */
 public class ReceiveObjects : RosReceiver
 {
 
@@ -71,25 +74,9 @@ public class ReceiveObjects : RosReceiver
             }
             else
             {
-                icpObjects.Add(o);  
+                icpObjects.Add(o);
             }
-            
         }
-
-
-        string s = "Printing objects:\n\n";
-        for (int i = 0; i < icpObjects.Count; i++)
-        {
-            GameObject p = icpObjects[i];
-            //Vector3 eulers = p.transform.eulerAngles;
-            //eulers -= new Vector3(-90, 0, 90); 
-            //Vector3 pointing = Quaternion.Euler(eulers) * Vector3.forward;
-            Vector3 pointing = p.transform.rotation * Vector3.right; 
-            s += "Position: " + p.transform.position.ToString() + "\n";
-            s += "Orientation: " + pointing.ToString() + "\n";
-        }
-        Debug.Log(s);
-
     }   
     
     private GameObject CreateObjectGameObject(Vector3 pos, Quaternion rot, int class_id)
