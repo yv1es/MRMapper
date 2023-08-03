@@ -13,7 +13,7 @@ To set up the core functionality of MRMapper, follow these steps:
 
 1. Clone this repository to your local machine.
 2. Open a terminal and navigate to the `MRMapper/core` folder.
-3. Execute the provided batch script: `build.bat` to build the Docker image named `mrmapper`. Please note that the image will require approximately 13 GB of disk space, and the build process can take up to an hour.
+3. Execute the provided batch script: `build.bat` to build the Docker image named `mrmapper-image`. Please note that the image will require approximately 13 GB of disk space, and the build process can take up to an hour.
 
 ### Camera Control
 The camera control scripts, responsible for managing the RealSense camera, run directly on the host system. To set up the necessary environment and install dependencies, follow these steps:
