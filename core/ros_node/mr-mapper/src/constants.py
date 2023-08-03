@@ -59,11 +59,9 @@ FLAT_OBJECTS = {59, 60, 62, 63, 66, 67, 73}
 # class ids for which MRMapper should fit a icp_object (currently only the office chair is supported)
 ICP_OBJECTS = {56}
 
-CHAIR_MESH_PATH = "/root/catkin_ws/src/MRMapper/src/meshes/56.obj"
+CHAIR_MESH_PATH = "/root/catkin_ws/src/mr-mapper/src/meshes/56.obj"
 
 # map from class_id to class label
-
-
 
 
 

@@ -13,6 +13,9 @@ using UnityEngine.XR;
 using static UnityEditor.PlayerSettings;
 
 
+/*
+ * This script renders the objects received from MRMapper core.
+ */
 public class ReceiveObjects : RosReceiver
 {
 
