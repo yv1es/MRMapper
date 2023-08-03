@@ -30,7 +30,7 @@ FRUSTUM_DEPTH = 8 # how deep the frustum from the camera reaches into the scene 
 
 # filtering 
 YOLO_CONFIDENCE_TRESHOLD = 0.5  # minimum confidence required from yolo detections 
-MIN_BOUNDING_BOX_MARGIN = 2  # minimum distance that a bounding box needs to have from the borders of the camera frame
+MIN_BOUNDING_BOX_MARGIN = 5  # minimum distance that a bounding box needs to have from the borders of the camera frame
 DBSCAN_EPS = 0.1
 DBSCAN_MIN_POINTS = 4 
 
