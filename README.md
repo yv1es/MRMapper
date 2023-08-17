@@ -32,7 +32,7 @@ MRMapper consists of three main components:
 ### Camera
 The system has been tested with an [Intel RealSense D435i](https://www.intelrealsense.com/depth-camera-d435i/) camera connected via a USB 3.0 cable.
 
-To run the camera scripts, ensure that the virtual environment set up during the installation is active in your current terminal session. If you are using PowerShell, "(env)" should appear to the left of "PS". If not, activate the virtual environment by executing the script located at `/MRMapper/camera/env/Scripts/activate`.
+To run the camera scripts, please ensure that the virtual environment set up during the installation is active in your current terminal session. If you are using PowerShell, "(env)" should appear to the left of "PS". If not, activate the virtual environment by executing the script `/MRMapper/camera/env/Scripts/activate`.
 
 In the `MRMapper/camera` folder, you will find several Python scripts:
 
@@ -47,9 +47,9 @@ To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat
 ### Unity
 The Unity project for MRMapper can be found under `MRMapper/unity`. Open Unity and launch the play view.
 
-The primary logic is contained under the "MRMapper" game object. Make sure to review the attached scripts for further understanding.
+The primary logic is contained under the "MRMapper" game object.
 
-After playing the Unity scene, it will connect to the core running in the container. It will spawn a child game object representing the reconstructed point cloud and other child game objects representing fitted planes and objects.
+After playing the Unity scene, it will connect to the core running in the container. It will spawn a child game object representing the reconstructed point cloud and other game objects representing fitted planes and objects.
 
 ### Summary
 To run MRMapper, follow these steps:
@@ -71,12 +71,12 @@ The MRMapper project is organized into the following directories:
 ## Remarks
 
 ### Camera Calibration
-The `MRMapper/camera/stream.py` script will print the camera calibration of the connected RealSense camera. It is essential to update the camera parameters specific to your RealSense device. Modify the parameters in the following files:
+The `MRMapper/camera/stream.py` script will print the camera calibration of the connected RealSense camera. It is essential to make sure you update the camera parameters specific to your RealSense device. Update the parameters in the following files:
 * `MRMapper/camera/camera_constants.py`
 * `MRMapper/core/ros_node/mr-mapper/src/constants.py`
 
 ### Parameter Tuning
-To view and modify all parameters for the sense-making process, navigate to `MRMapper/core/ros_node/mr-mapper/src/constants.py`. Adjust these parameters based on your specific requirements.
+To view and modify all parameters for the sense-making process, navigate to `MRMapper/core/ros_node/mr-mapper/src/constants.py`. You can adjust these parameters based on your specific requirements.
 
 ### RTABMap Parameters
 You can fine-tune RTABMap's parameters in the launch file `MRMapper/core/ros_node/mr-mapper/launch/launch_rtabmap.xml`. For reference, you can find all of RTAB-Map's parameters listed in this [header file](https://github.com/introlab/rtabmap/blob/master/corelib/include/rtabmap/core/Parameters.h). The "Grid/CellSize" parameter controls the density of the point cloud.
@@ -85,5 +85,4 @@ You can fine-tune RTABMap's parameters in the launch file `MRMapper/core/ros_nod
 By default, MRMapper uses TCP ports 5000-5004. If you wish to use other ports, update them accordingly in:
 * `MRMapper/camera/camera_constants.py`
 * `MRMapper/core/ros_node/mr-mapper/src/constants.py`
-
-Additionally, if you need to use other ports, update the `MRMapper/core/run.bat` script accordingly.
+* `MRMapper/core/run.bat`
