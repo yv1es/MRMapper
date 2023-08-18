@@ -29,6 +29,9 @@ Congratulations! The setup process is now complete, and MRMapper is ready to be 
 
 MRMapper consists of three main components:
 
+### Core
+To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
+
 ### Camera
 The system has been tested with an [Intel RealSense D435i](https://www.intelrealsense.com/depth-camera-d435i/) camera connected via a USB 3.0 cable.
 
@@ -40,9 +43,6 @@ In the `MRMapper/camera` folder, you will find several Python scripts:
 * `record.py`: Record footage with the camera to a file on disk. Use the "-h" flag for help on how to use this script.
 * `playback.py`: View recorded footage and replay it for MRMapper. This is useful for testing and development. Use the "-h" flag for help on how to use this script.
 * `groundtruth.py`: Determine the position of ArUco markers in the scene relative to the current camera position. This is useful for ground truth evaluation. Use the "-h" flag for help on how to use this script.
-
-### Core
-To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
 
 ### Unity
 The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
