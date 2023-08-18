@@ -45,7 +45,7 @@ In the `MRMapper/camera` folder, you will find several Python scripts:
 To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
 
 ### Unity
-The Unity project for MRMapper can be found under `MRMapper/unity`. Open Unity and launch the play view.
+The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
 
 The primary logic is contained under the "MRMapper" game object.
 
@@ -59,6 +59,14 @@ To run MRMapper, follow these steps:
 3. To view a prerecorded file from disk, use `MRMapper/camera/playback.py`. Alternatively, connect a RealSense camera and start the stream with `MRMapper/camera/stream.py`.
 
 You should now see the point cloud and reconstructed planes in Unity.
+
+## Meta Quest 2
+The Unity project is set up to support the [Meta Quest 2](https://www.meta.com/us/en/quest/products/quest-2/). Connect your Meta Quest 2 with [Quest Link](https://www.meta.com/help/quest/articles/headsets-and-accessories/oculus-link/) to the computer. 
+Now, when Link is enabled and you start the SampleScene, the Quest 2 will display it. 
+
+It is assumed that the RealSense camera is mounted to the Meta Quest 2. The MRMapper game object in Unity carries the `AlignCamera` script. 
+This script automatically aligns the origin of the reconstructed scene with that of the Quest. For this purpose, it needs the position
+and orientation of the Quest relative to the RealSense camera in physical space. Click on the MRMapper object and set these parameters in the Unity Inspector (the parameters can also be tuned while the scene is running) to ensure the reconstruction is aligned with the real world when using the Quest. 
 
 ## Project Hierarchy
 
