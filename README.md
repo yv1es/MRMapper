@@ -32,6 +32,13 @@ MRMapper consists of three main components:
 ### Core
 To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
 
+### Unity
+The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
+
+The primary logic is contained under the "MRMapper" game object.
+
+After playing the Unity scene, it will connect to the core running in the container. It will spawn a child game object representing the reconstructed point cloud and other game objects representing fitted planes and objects.
+
 ### Camera
 The system has been tested with an [Intel RealSense D435i](https://www.intelrealsense.com/depth-camera-d435i/) camera connected via a USB 3.0 cable.
 
@@ -44,12 +51,6 @@ In the `MRMapper/camera` folder, you will find several Python scripts:
 * `playback.py`: View recorded footage and replay it for MRMapper. This is useful for testing and development. Use the "-h" flag for help on how to use this script.
 * `groundtruth.py`: Determine the position of ArUco markers in the scene relative to the current camera position. This is useful for ground truth evaluation. Use the "-h" flag for help on how to use this script.
 
-### Unity
-The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
-
-The primary logic is contained under the "MRMapper" game object.
-
-After playing the Unity scene, it will connect to the core running in the container. It will spawn a child game object representing the reconstructed point cloud and other game objects representing fitted planes and objects.
 
 ### Summary
 To run MRMapper, follow these steps:
