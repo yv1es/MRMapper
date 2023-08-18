@@ -33,7 +33,7 @@ MRMapper consists of three main components:
 To start the MRMapper core, navigate to `MRMapper/core` and execute the `run.bat` script. This will launch a Docker container with MRMapper's core functionality.
 
 ### Unity
-The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
+The Unity project for MRMapper can be found under `MRMapper/unity`. Open the project in Unity (opening it for the first time may take a few minutes). Next, open the SampleScene (under `Asset/Scenes` in the project explorer) and launch the play view.
 
 The primary logic is contained under the "MRMapper" game object.
 
