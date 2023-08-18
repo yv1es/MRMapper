@@ -5,4 +5,4 @@ docker run  -it --rm ^
             -e DISPLAY=host.docker.internal:0.0 ^
             -v %CD%/ros_node/mr-mapper:/root/catkin_ws/src/mr-mapper ^
             mrmapper-image ^
-            bash -c "source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch mr-mapper launch.xml" 
+            bash -c "dos2unix /root/catkin_ws/src/mr-mapper/src/* && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch mr-mapper launch.xml" 
