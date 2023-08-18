@@ -68,6 +68,7 @@ Now, when Link is enabled and you start the SampleScene, the Quest 2 will displa
 It is assumed that the RealSense camera is mounted to the Meta Quest 2. The MRMapper game object in Unity carries the `AlignCamera` script. 
 This script automatically aligns the origin of the reconstructed scene with that of the Quest. For this purpose, it needs the position
 and orientation of the Quest relative to the RealSense camera in physical space. Click on the MRMapper object and set these parameters in the Unity Inspector (the parameters can also be tuned while the scene is running) to ensure that the reconstruction is aligned with the real world when using the Quest. 
+Note that Unity uses a left-handed Y-up coordinate system, the position is in meters and the orientation in degrees. 
 
 ## Project Hierarchy
 
