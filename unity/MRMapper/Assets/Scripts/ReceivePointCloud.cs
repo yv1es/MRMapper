@@ -22,7 +22,7 @@ public class ReceivePointCloud : RosReceiver
     int port = 5001;
     string log_tag = "Pcd Receiver";
     
-    public float pointSize = 1f;
+    public float pointSize = 10f;
     GameObject pointCloud; 
 
 

@@ -21,8 +21,8 @@ public class AlignCameras : MonoBehaviour
     void Start()
     {
         realSense = GameObject.Find("RealSense");
-        oculus = GameObject.Find("Oculus");
-        offset = GameObject.Find("Oculus Offset"); 
+        oculus = GameObject.Find("CenterEyeAnchor");
+        offset = GameObject.Find("OVRCameraRig"); 
     }
 
     void Update()
@@ -44,7 +44,7 @@ public class AlignCameras : MonoBehaviour
         float absRotDiff = 2f * Mathf.Rad2Deg * Mathf.Acos(Mathf.Abs(rotDiff.w));
 
 
-        float tPos = 0.1f;
+        float tPos = 0.05f;
         float tRot = 10f;
 
 
