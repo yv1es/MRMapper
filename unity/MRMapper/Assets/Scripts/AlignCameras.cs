@@ -15,18 +15,22 @@ public class AlignCameras : MonoBehaviour
 
     // define the position of the Oculus relative to the RealSense
     public Vector3 realSenseToOculusPos = new Vector3(0, -0.05f, 0);
-    public Quaternion realSenseToOculusRot = Quaternion.Euler(0, 0, 0); 
+    public Vector3 realSenseToOculusRotAngles = new Vector3(0, 0, 0);
+
+    private Quaternion realSenseToOculusRot;
 
 
     void Start()
     {
         realSense = GameObject.Find("RealSense");
-        oculus = GameObject.Find("Oculus");
-        offset = GameObject.Find("Oculus Offset"); 
+        oculus = GameObject.Find("CenterEyeAnchor");
+        offset = GameObject.Find("OVRCameraRig"); 
     }
 
     void Update()
     {
+        realSenseToOculusRot = Quaternion.Euler(realSenseToOculusRotAngles); 
+
         // compute where the Oculus should be positioned 
         Vector3 shouldPos = realSenseToOculusPos + realSense.transform.position ;
         Quaternion shouldRot = realSenseToOculusRot * realSense.transform.rotation;
@@ -44,7 +48,7 @@ public class AlignCameras : MonoBehaviour
         float absRotDiff = 2f * Mathf.Rad2Deg * Mathf.Acos(Mathf.Abs(rotDiff.w));
 
 
-        float tPos = 0.1f;
+        float tPos = 0.05f;
         float tRot = 10f;
 
 

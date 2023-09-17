@@ -22,12 +22,10 @@ public class ReceiveOdom : RosReceiver
     int port = 5002;
     string log_tag = "Odom Receiver";
     GameObject realSense;
-    GameObject mainCamera; 
     
     public void Start() {
         Setup(port, log_tag, ProcessReceivedBytes);
         realSense = GameObject.Find("RealSense");
-        mainCamera = GameObject.Find("Main Camera");
     }   
 
     private void ProcessReceivedBytes(byte[] data)
