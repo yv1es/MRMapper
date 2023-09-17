@@ -15,7 +15,9 @@ public class AlignCameras : MonoBehaviour
 
     // define the position of the Oculus relative to the RealSense
     public Vector3 realSenseToOculusPos = new Vector3(0, -0.05f, 0);
-    public Quaternion realSenseToOculusRot = Quaternion.Euler(0, 0, 0); 
+    public Vector3 realSenseToOculusRotAngles = new Vector3(0, 0, 0);
+
+    private Quaternion realSenseToOculusRot;
 
 
     void Start()
@@ -27,6 +29,8 @@ public class AlignCameras : MonoBehaviour
 
     void Update()
     {
+        realSenseToOculusRot = Quaternion.Euler(realSenseToOculusRotAngles); 
+
         // compute where the Oculus should be positioned 
         Vector3 shouldPos = realSenseToOculusPos + realSense.transform.position ;
         Quaternion shouldRot = realSenseToOculusRot * realSense.transform.rotation;
