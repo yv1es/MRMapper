@@ -20,11 +20,11 @@ RUN apt update \
     build-essential 
 
 # New version of cmake is neccessary to compile Open3d v0.17
-RUN apt purge -y --auto-remove cmake \
+RUN DEBIAN_FRONTEND=noninteractive apt purge -y --auto-remove cmake \
     && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
     && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
     && apt update \
-    && apt install -y cmake cmake-curses-gui
+    && apt install -y --no-install-recommends cmake cmake-curses-gui
 
 
 # Install Python packages 
@@ -64,7 +64,7 @@ RUN rm -rf ~/Open3D
 # Install ROS noetic 
 RUN bash -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
-RUN apt update && apt install -y ros-noetic-ros-base
+RUN DEBIAN_FRONTEND=noninteractive apt update && apt install -y ros-noetic-ros-base
 
 RUN apt update \
  && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
@@ -90,9 +90,9 @@ RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 
 # Install RTAB-Map 
-RUN apt install -y ros-noetic-rtabmap
-RUN apt install -y ros-noetic-rtabmap-ros
-RUN apt remove -y ros-noetic-rtabmap-ros
+RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends ros-noetic-rtabmap
+RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends ros-noetic-rtabmap-ros
+RUN DEBIAN_FRONTEND=noninteractive apt remove -y ros-noetic-rtabmap-ros
 
 # Download RTAB-Map-Ros
 RUN cd ~/catkin_ws \
