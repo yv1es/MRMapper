@@ -1,4 +1,8 @@
 # MRMapper - Detection and Sense Making for Mixed Reality
+MRMapper is the result of my Bachelor Thesis at ETH Zurich. It performs real-time scene reconstruction, detects planes, and identifies objects in 3D space. MRMapper enables Mixed Reality applications to better understand their user’s surroundings. 
+
+You can find more information in my thesis [Detection and Sense-Making of the Real-World Physical Surroundings for MR](https://github.com/yv1es/MRMapper/blob/main/Detection%20and%20Sense-Making%20of%20the%20Real-World%20Physical%20Surroundings%20for%20MR.pdf)
+
 
 ## Installation
 ### Prerequisites
